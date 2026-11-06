@@ -214,9 +214,15 @@ def main(argv: list[str]) -> int:
         repositories = [by_name[n] for n in sorted(by_name, key=str.lower)]
         # `generatedAt` is a clock, and a clock in a committed file means a commit
         # every six hours whose only content is the time. It is kept from the
-        # previous run unless the listing actually moved.
+        # previous run unless something a reader would care about moved.
+        #
+        # The comparison is on the repository *names*, not on the records.
+        # `pushedAt` changes whenever anyone pushes - including this sync pushing
+        # its own last commit - so comparing records made every run look like a
+        # change, which is precisely the churn this is meant to prevent.
         generated = index.get("generatedAt")
-        if repositories != index.get("repositories") or args.org != index.get("org"):
+        before = [r.get("name") for r in index.get("repositories", [])]
+        if before != [r.get("name") for r in repositories] or args.org != index.get("org"):
             generated = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         out.update({
             "org": args.org,
