@@ -111,5 +111,18 @@ jobs:
           git add events.log
           git diff --cached --quiet && { echo "already recorded"; exit 0; }
           git commit -q -m "event: ${TYPE} ${REPO}"
-          git push
+          # The concurrency group serialises runs, but two runs dispatched within
+          # the same second can still finish out of order and the loser's push is
+          # rejected. Rebase and retry rather than failing: events.log is
+          # append-only one-line-JSON and index.json is regenerated, so a rebase
+          # never has a real conflict - only an interleaved one that heals.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}); rebasing onto origin/main"
+            git pull --rebase --autostash origin main
+          done
+          echo "::error::Could not push after three attempts."
+          exit 1
           echo "- recorded \`${TYPE}\` for \`${REPO}\`" >> "$GITHUB_STEP_SUMMARY"
