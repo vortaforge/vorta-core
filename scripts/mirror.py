@@ -99,14 +99,19 @@ def clone(org: str, name: str, branch: str) -> tuple[Path, str]:
     return target, head
 
 
-def copy_tree(src: Path, dest: Path, exclude: set[str] = frozenset()) -> dict:
+def copy_tree(src: Path, dest: Path, skip_paths: frozenset[str] = frozenset(),
+              skip_dirs: set[str] = frozenset()) -> dict:
     """Copy `src` into `dest`, skipping what should not be mirrored.
 
-    `exclude` names top-level directories to leave out. It exists for the
-    self-mirror: `vorta-core` is one of the repositories being mirrored, and by
-    the second sync its own tree contains the `vorta-core/` snapshot written by
-    the first. Copying that in again would nest `vorta-core/vorta-core/`, then
-    three deep, forever. Excluding the one directory stops it at the source.
+    Two kinds of exclusion, and they are not interchangeable:
+
+    `skip_paths` names exact files, relative to `src`. It exists for the
+    self-mirror: `vorta-core` is one of the repositories being mirrored, and its
+    tree contains the mirror trees written by previous runs. Copying those in
+    would mirror the mirrors - the first CI run did exactly that and pulled in
+    5 350 files - and would nest one level deeper on every run after.
+
+    `skip_dirs` names top-level directories to leave out entirely.
     """
     files = dropped = 0
     total = 0
@@ -114,9 +119,11 @@ def copy_tree(src: Path, dest: Path, exclude: set[str] = frozenset()) -> dict:
     for path in sorted(src.rglob("*")):
         rel = path.relative_to(src)
         parts = rel.parts
-        if parts[0] in exclude:
+        if parts[0] in skip_dirs:
             continue
         if any(p in SKIP_DIRS for p in parts):
+            continue
+        if str(rel) in skip_paths:
             continue
         if path.is_symlink():
             dropped += 1
@@ -301,7 +308,22 @@ def main(argv: list[str]) -> int:
             if dest.exists():
                 clear(dest)
             dest.mkdir(parents=True, exist_ok=True)
-            record = copy_tree(source, dest, exclude={self_name} if name == self_name else frozenset())
+            if name == self_name:
+                # This repository's tree holds the mirror trees written by
+                # previous runs. Copying them in would mirror the mirrors - the
+                # first CI run pulled in 5 350 files that way - and would nest a
+                # level deeper on every run after.
+                #
+                # index.json and events.log change on every sync by design; the
+                # manifest carries a timestamp. Including them would produce a
+                # commit every six hours whose only content is the time.
+                record = copy_tree(
+                    source, dest,
+                    skip_paths=frozenset({MANIFEST, "index.json", "events.log"}),
+                    skip_dirs={self_name} | set(mirrors),
+                )
+            else:
+                record = copy_tree(source, dest)
         finally:
             shutil.rmtree(source.parent, ignore_errors=True)
 
@@ -347,8 +369,24 @@ def main(argv: list[str]) -> int:
     if args.apply:
         out = dict(index)
         out["mirrors"] = {n: mirrors[n] for n in sorted(mirrors)}
-        out["mirrorsGeneratedAt"] = stamp
-        args.index.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+
+        # Keep the old stamp when the mirrors did not actually move. Writing a
+        # fresh timestamp unconditionally meant every scheduled run produced a
+        # commit whose only change was the clock.
+        before = index.get("mirrors") or {}
+        unchanged = json.dumps(before, sort_keys=True) == json.dumps(
+            out["mirrors"], sort_keys=True)
+        if unchanged and index.get("mirrorsGeneratedAt"):
+            stamp = index["mirrorsGeneratedAt"]
+        # `mirrorsGeneratedAt` moves on every run by definition, so writing it
+        # unconditionally produced a commit every six hours whose only content
+        # was the time. When nothing else changed, the previous stamp is kept and
+        # the file is left byte-identical.
+        rendered = json.dumps({**out, "mirrorsGeneratedAt": stamp}, indent=2) + "\n"
+        previous = (args.index.read_text(encoding="utf-8")
+                    if args.index.exists() else "")
+        if rendered != previous:
+            args.index.write_text(rendered, encoding="utf-8")
     elif stale:
         print(f"dry run: {len(stale)} mirror(s) would be written or removed "
               f"(pass --apply to write them)")

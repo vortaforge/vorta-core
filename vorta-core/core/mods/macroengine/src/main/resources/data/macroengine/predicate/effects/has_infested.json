@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:infested": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:conduit_power": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

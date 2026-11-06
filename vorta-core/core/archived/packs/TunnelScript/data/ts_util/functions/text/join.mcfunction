@@ -1,4 +1,0 @@
-# ts_util:text/join is not available on the 1.19.2 build: it relies on function macros,
-# which Minecraft only added in 1.20.2. This stub explains the limitation and
-# points the player at the 1.21.6 build instead (clickable GitHub link).
-tellraw @s [{"text":"[TunnelScript] ","color":"aqua"},{"text":"'ts_util:text/join' needs Minecraft 1.20.2+ (function macros). ","color":"gray"},{"text":"String concatenation in storage needs macros.  ","color":"gray"},{"text":"Click here for the 1.21.6 build.","color":"yellow","underlined":true,"clickEvent":{"action":"open_url","value":"https://github.com/vortaforge/core/tree/main/packs/TunnelScript"},"hoverEvent":{"action":"show_text","value":[{"text":"https://github.com/vortaforge/core/tree/main/packs/TunnelScript","color":"gray"}]}}]

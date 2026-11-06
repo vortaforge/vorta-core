@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:wind_charged": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:hero_of_the_village": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

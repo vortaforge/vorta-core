@@ -1,1 +1,0 @@
-function guikit:act/nav

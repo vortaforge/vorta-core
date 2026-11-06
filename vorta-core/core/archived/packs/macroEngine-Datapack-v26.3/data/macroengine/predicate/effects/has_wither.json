@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:wither": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:darkness": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

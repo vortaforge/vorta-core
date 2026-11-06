@@ -1,6 +1,0 @@
-{
-  "values": [
-    "rtwrapper:core/load",
-    "rtwrapper:core/trigger_load"
-  ]
-}

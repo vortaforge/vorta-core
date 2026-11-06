@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:blindness": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

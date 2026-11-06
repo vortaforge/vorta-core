@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:levitation": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

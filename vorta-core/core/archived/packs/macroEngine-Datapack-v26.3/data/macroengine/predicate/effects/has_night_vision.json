@@ -1,9 +1,0 @@
-{
-  "entity": "this",
-  "predicate": {
-    "effects": {
-      "minecraft:night_vision": {}
-    }
-  },
-  "type": "minecraft:entity_properties"
-}

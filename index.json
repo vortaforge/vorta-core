@@ -30,13 +30,13 @@
     },
     "vorta-core": {
       "branch": "main",
-      "commit": "7cb6b84ed3c2a3863b7ed1dce5e33f38454f0000",
-      "files": 5350,
-      "bytes": 10967937,
-      "syncedAt": "2026-11-06T18:23:38.094508Z"
+      "commit": "fe11dcc1ee367e8208e8406793acc73466d0d7ae",
+      "files": 12,
+      "bytes": 69310,
+      "syncedAt": "2026-11-06T18:24:56.477543Z"
     }
   },
-  "mirrorsGeneratedAt": "2026-11-06T18:23:38.094508Z",
+  "mirrorsGeneratedAt": "2026-11-06T18:25:42.136986Z",
   "org": "vortaforge",
   "generatedAt": "2026-11-06T18:23:37.296947Z",
   "count": 5,

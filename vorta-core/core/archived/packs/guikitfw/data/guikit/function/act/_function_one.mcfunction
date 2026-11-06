@@ -1,2 +1,0 @@
-# macro $(fn)
-$function $(fn)
