@@ -105,10 +105,89 @@ class MirrorTest(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "scripts"))
         import mirror  # noqa: PLC0415
 
-        mirror.copy_tree(src, dest, exclude={"vorta-core"})
+        mirror.copy_tree(src, dest, skip_dirs={"vorta-core"})
 
         self.assertTrue((dest / "scripts" / "sync.py").is_file())
         self.assertFalse((dest / "vorta-core").exists())
+
+
+    def test_self_mirror_does_not_mirror_the_mirrors(self) -> None:
+        """The second CI run mirrored core/ into vorta-core/ - 5 350 files.
+
+        Excluding the self directory by name is not enough: the mirror trees are
+        siblings of it, not children. The self copy is a snapshot of *source*, so
+        the other mirrors, the index, the ledger and the manifest all stay out.
+        Without this the copy doubles on every run.
+        """
+        src = self.tmp / "src"
+        write(src, {
+            "scripts/sync.py": "x",
+            "README.md": "x",
+            "index.json": "changes every run",
+            "events.log": "grows every run",
+            ".mirror.json": '{"syncedAt": "now"}',
+            "core/archived/big.mcfunction": "x" * 100,
+            "docs/DESIGN.md": "x",
+            "vorta-core/README.md": "previous snapshot",
+        })
+        dest = self.tmp / "dest"
+        dest.mkdir()
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import mirror  # noqa: PLC0415
+
+        record = mirror.copy_tree(
+            src, dest,
+            skip_paths=frozenset({mirror.MANIFEST, "index.json", "events.log"}),
+            skip_dirs={"vorta-core", "core", "docs"},
+        )
+
+        self.assertEqual(sorted(record["written"]), ["README.md", "scripts/sync.py"])
+
+
+    def test_unchanged_mirror_does_not_touch_index(self) -> None:
+        """A scheduled sync that changes nothing must write nothing.
+
+        `mirrorsGeneratedAt` is a clock. Written unconditionally it produced a
+        commit every six hours containing one line, which is noise in a ledger
+        meant to be read.
+        """
+        work = self.tmp / "work"
+        work.mkdir()
+        origin = self.tmp / "origins" / "docs"
+        make_repo(origin, {"index.html": "theirs"})
+
+        index = self.tmp / "index.json"
+        index.write_text(json.dumps({"org": "testorg", "repositories": [],
+                                     "mirrors": {}}), encoding="utf-8")
+        script = (
+            "import sys, pathlib\n"
+            "sys.path.insert(0, %r)\n"
+            "import mirror\n"
+            "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
+            "mirror.remote_head = lambda org, name, branch: 'abc'\n"
+            "mirror.discover.discover = lambda org, include_archived: "
+            "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
+            "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
+            "'--root',%r,'--apply']))\n"
+        ) % (str(ROOT / "scripts"), str(origin), str(index), str(work))
+
+        for _ in range(2):
+            if not origin.exists():
+                make_repo(origin, {"index.html": "theirs"})
+            self.assertEqual(
+                subprocess.run(["python3", "-c", script], capture_output=True,
+                               text=True).returncode, 0)
+        first = index.read_text(encoding="utf-8")
+
+        if not origin.exists():
+            make_repo(origin, {"index.html": "theirs"})
+        self.assertEqual(
+            subprocess.run(["python3", "-c", script], capture_output=True,
+                           text=True).returncode, 0)
+
+        self.assertEqual(index.read_text(encoding="utf-8"), first,
+                         "an unchanged sync rewrote index.json")
 
     def test_symlinks_are_dropped_not_followed(self) -> None:
         src = self.tmp / "src"
@@ -143,7 +222,7 @@ class MirrorTest(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "scripts"))
         import mirror  # noqa: PLC0415
 
-        record = mirror.copy_tree(src, dest, exclude=set())
+        record = mirror.copy_tree(src, dest)
 
         self.assertEqual(record["written"], ["index.html"])
         self.assertNotIn("DESIGN.md", record["written"])
