@@ -4,41 +4,36 @@
       "branch": "main",
       "commit": "080cc786d8c2382dcfaaaab31d0294964b45a56b",
       "files": 18,
-      "bytes": 139164,
-      "syncedAt": "2026-11-06T18:20:48.331221Z"
+      "bytes": 139164
     },
     "core": {
       "branch": "main",
       "commit": "7f8b53479c427f66974c92fe1009149fc5969afa",
       "files": 5276,
-      "bytes": 9870316,
-      "syncedAt": "2026-11-06T18:20:48.331221Z"
+      "bytes": 9870316
     },
     "docs": {
       "branch": "main",
       "commit": "ee2dcc7a632afdf046230e280c22a7a5b44c6007",
       "files": 11,
-      "bytes": 79879,
-      "syncedAt": "2026-11-06T18:20:48.331221Z"
+      "bytes": 79879
     },
     "macroengine-modules": {
       "branch": "main",
       "commit": "f6d5757866d0e299c3caaef107948c1ba519c059",
       "files": 22,
-      "bytes": 208951,
-      "syncedAt": "2026-11-06T18:43:47.274997Z"
+      "bytes": 208951
     },
     "vorta-core": {
       "branch": "main",
-      "commit": "90d7450f444062cdc506c2cb4d518cef6c0cd87e",
+      "commit": "86dde6799688d10470c5af7725265a6ac4685345",
       "files": 12,
-      "bytes": 74516,
-      "syncedAt": "2026-11-06T18:43:47.274997Z"
+      "bytes": 74516
     }
   },
-  "mirrorsGeneratedAt": "2026-11-06T18:43:47.274997Z",
+  "mirrorsGeneratedAt": "2026-11-06T18:45:15.682505Z",
   "org": "vortaforge",
-  "generatedAt": "2026-11-06T18:43:46.586089Z",
+  "generatedAt": "2026-11-06T18:26:58.857303Z",
   "count": 5,
   "repositories": [
     {
@@ -104,7 +99,7 @@
       "fork": false,
       "defaultBranch": "main",
       "createdAt": "2026-11-06T15:47:18Z",
-      "pushedAt": "2026-11-06T18:42:28Z",
+      "pushedAt": "2026-11-06T18:22:50Z",
       "language": "Python",
       "topics": [],
       "stars": 0,
@@ -119,7 +114,7 @@
       "fork": false,
       "defaultBranch": "main",
       "createdAt": "2026-11-06T17:17:52Z",
-      "pushedAt": "2026-11-06T18:27:02Z",
+      "pushedAt": "2026-11-06T18:26:23Z",
       "language": "Python",
       "topics": [],
       "stars": 0,

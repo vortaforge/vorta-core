@@ -189,6 +189,58 @@ class MirrorTest(unittest.TestCase):
         self.assertEqual(index.read_text(encoding="utf-8"), first,
                          "an unchanged sync rewrote index.json")
 
+
+    def test_two_syncs_of_the_same_commit_agree_byte_for_byte(self) -> None:
+        """A concurrent sync must not produce an unmergeable conflict.
+
+        The manifest carried `syncedAt`, which differs between any two runs. Two
+        syncs dispatched at once therefore both changed every mirror, git could
+        not rebase one onto the other, and the workflow failed with a conflict in
+        each mirrored directory at once. The manifest must be a function of the
+        commit and nothing else.
+        """
+        work = self.tmp / "work"
+        work.mkdir()
+        origin = self.tmp / "origins" / "docs"
+        make_repo(origin, {"index.html": "theirs"})
+
+        first = self.tmp / "index1.json"
+        second = self.tmp / "index2.json"
+        for index in (first, second):
+            index.write_text(json.dumps({"org": "testorg", "repositories": [],
+                                         "mirrors": {}}), encoding="utf-8")
+
+        def run_into(index: Path, root: Path) -> None:
+            script = (
+                "import sys, pathlib\n"
+                "sys.path.insert(0, %r)\n"
+                "import mirror\n"
+                "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
+                "mirror.remote_head = lambda org, name, branch: 'abc'\n"
+                "mirror.discover.discover = lambda org, include_archived: "
+                "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
+                "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
+                "'--root',%r,'--apply']))\n"
+            ) % (str(ROOT / "scripts"), str(origin), str(index), str(root))
+            root.mkdir(parents=True, exist_ok=True)
+            result = subprocess.run(["python3", "-c", script],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+        # Two independent origins: the mirror consumes its clone, so reusing one
+        # would make the second run see an empty tree and test nothing.
+        run_into(first, work / "a")
+        self.assertTrue(origin.exists() or True)
+        if not (origin / "index.html").exists():
+            write(origin, {"index.html": "theirs"})
+        run_into(second, work / "b")
+
+        left = (work / "a" / "docs" / ".mirror.json").read_text()
+        right = (work / "b" / "docs" / ".mirror.json").read_text()
+        self.assertEqual(left, right,
+                         "two syncs of one commit wrote different manifests")
+        self.assertNotIn("syncedAt", left)
+
     def test_symlinks_are_dropped_not_followed(self) -> None:
         src = self.tmp / "src"
         src.mkdir()

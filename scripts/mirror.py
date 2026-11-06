@@ -296,7 +296,6 @@ def main(argv: list[str]) -> int:
             if had == head and (dest / MANIFEST).is_file():
                 results.append({"repo": name, "ok": True, "unchanged": True})
                 continue
-
         source, commit = clone(args.org, name, branch)
         try:
             clash = clashes_with_ours(source, dest, managed=name in mirrors)
@@ -332,12 +331,14 @@ def main(argv: list[str]) -> int:
             "repo": f"{args.org}/{name}",
             "branch": branch,
             "commit": commit,
-            "syncedAt": stamp,
+            # No wall clock in the committed tree. `syncedAt` was the one field
+            # that differed between two syncs of the same commit, and it turned a
+            # concurrent push into an unmergeable conflict in every mirrored
+            # directory at once. `commit` already says how fresh the snapshot is.
             "note": "Snapshot of the default branch. Read-only: do not edit here.",
         })
         (dest / MANIFEST).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        mirrors[name] = {k: record[k] for k in
-                         ("branch", "commit", "files", "bytes", "syncedAt")}
+        mirrors[name] = {k: record[k] for k in ("branch", "commit", "files", "bytes")}
         results.append(record)
 
     # A repository that left the organization keeps none of its mirror: a stale
