@@ -66,7 +66,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          persist-credentials: false
+          # Credentials MUST persist here: this job ends with `git push` and there
+          # is no other credential in the environment. `false` is the right default
+          # for a workflow that only reads - it keeps the token out of .git/config
+          # where a later step could exfiltrate it - but it silently turns the
+          # final push into "could not read Username for 'https://github.com'".
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
