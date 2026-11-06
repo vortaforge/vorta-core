@@ -165,9 +165,19 @@ jobs:
           set -euo pipefail
           # The mirrored trees are untracked on a first run and modified on
           # later ones, so the emptiness test has to consider both.
+          #
+          # The paths are read from index.json rather than hard-coded: the set of
+          # mirrors changes (a repository is added, or vorta-core stops mirroring
+          # itself) and a literal list then fails with "pathspec did not match"
+          # on the very next run.
+          MIRROR_DIRS="$(python3 -c 'import json;print(" ".join(json.load(open("index.json")).get("mirrors", {})))')"
+          if [ -z "$MIRROR_DIRS" ]; then
+            echo "::error::index.json lists no mirrors; refusing to commit, because"
+            echo "::error::an empty path list makes 'git add -A' stage the whole tree."
+            exit 1
+          fi
           if git status --porcelain --untracked-files=normal -- \
-               index.json events.log \
-               .github docs core macroengine-modules vorta-core | grep -q .; then
+               index.json events.log $MIRROR_DIRS | grep -q .; then
             :
           else
             echo "in sync, nothing to commit"
@@ -180,8 +190,7 @@ jobs:
           # `-A` so deletions inside a mirror are staged too: a file removed
           # upstream must disappear here, or the mirror slowly becomes a union
           # of every state the repository has ever been in.
-          git add -A index.json events.log \
-                     .github docs core macroengine-modules vorta-core
+          git add -A index.json events.log $MIRROR_DIRS
           # The message names what moved, so `git log` on this repository is a
           # readable history of the organization's shape rather than a wall of
           # "chore: sync".
