@@ -81,6 +81,23 @@ not optional on a public endpoint: without it any POST can append to the ledger.
 Signatures are checked with `hmac.compare_digest`, and a bad signature gets a bare
 `401` with no explanation.
 
+## Verified against the live organization
+
+Not just tested locally:
+
+- **Creation** — a repository created through the API was recorded by the
+  `repository_dispatch` path within the minute, then picked up by the next sweep.
+- **Deletion** — a repository that vanished from the organization was recorded as
+  `deleted` and dropped from the index, by the scheduled run alone
+  (`sync: deleted vorta-core-synctest`). This is the case the whole ledger design
+  exists for.
+- **Change** — a `language: null -> Python` transition became a `changed` event.
+
+Two real bugs were found and fixed by running it rather than reasoning about it:
+`persist-credentials: false` silently broke `git push`, and two runs dispatched in
+the same second could both commit and one would be rejected — now it rebases and
+retries.
+
 ## Setup checklist
 
 - [ ] Secret `ORG_READ_TOKEN` — reads the org's repository list (`repo` +

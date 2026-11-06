@@ -37,6 +37,21 @@ What to do when it is red, and what to check before it goes red.
 The cron minutes are deliberately odd (`:17`, `:43`) — GitHub delays scheduled
 runs under load, and picking a minute nobody else picks makes the delay shorter.
 
+## Verified behaviour
+
+Everything below was run against the live organization, not only tested locally.
+
+- **Creation** — a repository created through the API was recorded by
+  `repository_dispatch` in the same minute (`event: created sync-demo-repo`), and
+  appeared in `index.json` on the next sweep.
+- **Deletion** — a repository that disappeared from the organization was recorded
+  as `deleted` with the detail *"present in index.json, absent from the
+  organization"*, and dropped from the index in the same commit
+  (`sync: deleted vorta-core-synctest`). Nobody asked for it; the scheduled run
+  found it.
+- **Change** — a `language: null -> Python` transition was recorded as a `changed`
+  event on the run that first saw the repository.
+
 ## When `health.yml` is red
 
 It means `index.json` does not match the organization. Read the run summary: it
@@ -84,9 +99,11 @@ hand or re-run after the guard's threshold no longer applies.
 
 ## `git push` rejected
 
-Two runs writing at once. Both workflows share the concurrency group
-`vorta-core-sync`, so this should not happen through the workflows; a manual push
-to `main` while a run is in flight is the usual way it does. Pull, then re-run.
+Two runs writing at once. The workflow handles this by rebasing and retrying up to
+three times, because both pushed files are rebase-friendly by construction:
+`events.log` is append-only one-line JSON and `index.json` is regenerated from
+GitHub. If it still fails after three attempts, it is a manual push conflicting
+with a run — pull, then re-run.
 
 ## A bad ledger line
 
@@ -108,6 +125,20 @@ A line that is wrong is therefore a deliberate decision rather than a routine fi
 3. Revoke the old token.
 
 `sync.yml` will pick up the new secret on its next run; no code change is needed.
+
+## Known limitation: the token needs `delete_repo` to tidy up
+
+Detecting a deletion needs only read access — that part is proven. *Performing*
+one by hand, e.g. removing a throwaway test repository, needs the token to carry
+the `delete_repo` scope, which is a separate grant:
+
+```bash
+gh auth refresh -h github.com -s delete_repo
+```
+
+Without it the API returns `403 Must have admin rights to Repository`, which reads
+like a permissions problem on the repository and is really a missing scope on the
+token. The sync is unaffected either way.
 
 ## Checking the sync locally before trusting it
 
