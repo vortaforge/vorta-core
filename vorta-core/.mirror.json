@@ -1,6 +1,6 @@
 {
   "files": 12,
-  "bytes": 74516,
+  "bytes": 77333,
   "symlinksDropped": 0,
   "paths": [
     ".gitattributes",
@@ -18,6 +18,6 @@
   ],
   "repo": "vortaforge/vorta-core",
   "branch": "main",
-  "commit": "86dde6799688d10470c5af7725265a6ac4685345",
+  "commit": "1561990439029190345c54aecdbaf1a582ea42af",
   "note": "Snapshot of the default branch. Read-only: do not edit here."
 }
