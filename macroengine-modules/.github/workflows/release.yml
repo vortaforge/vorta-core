@@ -1,0 +1,208 @@
+# .github/workflows/release.yml
+#
+# Cutting a release: push a tag like `v1.0.0` and this builds all 20 packs from
+# the source pack, verifies them, stamps every pack.mcmeta with that version, and
+# attaches the jars to a GitHub Release.
+#
+# Why the version comes from the tag and not from gradle.properties: the tag is
+# what a consumer sees and what a download URL contains. If the two could disagree,
+# a jar named 1.0.0 could contain a pack.mcmeta claiming 0.9.0, and the game reads
+# pack.mcmeta. So `-Pmodules_version` overrides the property, and the tag wins.
+#
+# Two safeguards worth knowing about:
+#
+#   * A release is built from a tag, and a tag can point at any commit - including
+#     one where CI never passed. So this workflow re-runs the full verify rather
+#     than trusting that a green CI run exists for the SHA.
+#   * The version is checked against the tag before anything is uploaded. A typo'd
+#     tag (`v1.0.01`) produces a jar named after the typo, which cannot be undone
+#     without deleting the release.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build (e.g. v1.0.0)"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REPO: vortaforge/core
+  SOURCE_PACK: archived/packs/macroEngine-Datapack-v26.3
+  JAVA_VERSION: "25"
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Write access is granted here and nowhere else in this repository, and only
+    # the upload step uses it.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Resolve and validate the version
+        id: version
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Strict semver: no leading zeros. `v1.0.01` would otherwise be accepted
+          # and produce a jar called `me_core_module-1.0.01.jar`, which sorts and
+          # compares wrong against 1.0.1 forever and cannot be renamed without
+          # deleting a release people have already downloaded.
+          if ! printf '%s' "$TAG" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+            echo "::error title=Bad tag::'${TAG}' is not of the form vMAJOR.MINOR.PATCH."
+            echo "::error::Jars are named from this string, so a typo becomes a filename."
+            exit 1
+          fi
+          version="${TAG#v}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "releasing ${version}"
+
+      - name: Fetch the source pack
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_READ_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          dest="${RUNNER_TEMP}/source-pack"
+          rm -rf "$dest"
+          if ! git clone --quiet --filter=blob:none --sparse --depth=1 \
+                "https://x-access-token:${GH_TOKEN}@github.com/${SOURCE_REPO}.git" "$dest"; then
+            echo "::error title=Cannot fetch the source pack::set SOURCE_READ_TOKEN if ${SOURCE_REPO} is private."
+            exit 1
+          fi
+          git -C "$dest" sparse-checkout set "$SOURCE_PACK"
+          if [ ! -f "$dest/$SOURCE_PACK/pack.mcmeta" ]; then
+            echo "::error title=Source pack missing::${SOURCE_PACK} was moved or renamed upstream."
+            exit 1
+          fi
+          echo "SOURCE_DIR=$dest/$SOURCE_PACK" >> "$GITHUB_ENV"
+
+      - name: Set up JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+        with:
+          validate-wrappers: true
+
+      - name: Tool self-tests
+        run: python3 tools/test_split_guard.py
+
+      - name: Split
+        run: python3 tools/split.py --source "$SOURCE_DIR" --out . --in-place
+
+      - name: Verify the module contract
+        # Re-run even though CI checks every push: a tag can point at a commit
+        # that never went through CI, and a release is the worst place to find out.
+        run: python3 tools/verify.py --pack packs --graph
+
+      - name: Build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./gradlew --no-daemon --console=plain check dist -Pmodules_version="$VERSION"
+
+      - name: Check the jars carry the release version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          expected="$(find build/dist -name "*-${VERSION}.jar" | wc -l)"
+          total="$(find build/dist -name "*.jar" | wc -l)"
+          if [ "$expected" -ne "$total" ]; then
+            echo "::error title=Version mismatch::only ${expected} of ${total} jars carry ${VERSION}."
+            ls -1 build/dist
+            exit 1
+          fi
+          if [ "$total" -lt 20 ]; then
+            echo "::error title=Missing packs::expected 20 jars, found ${total}."
+            exit 1
+          fi
+          # pack.mcmeta is what the game reads, so it must agree with the filename.
+          for jar in build/dist/*.jar; do
+            meta="$(unzip -p "$jar" pack.mcmeta)"
+            if ! printf '%s' "$meta" | grep -q "${VERSION}"; then
+              echo "::error title=Stale pack.mcmeta::${jar##*/} does not mention ${VERSION}."
+              exit 1
+            fi
+          done
+          echo "${total} jars, all carrying ${VERSION}"
+
+      - name: Checksums
+        # A consumer who downloads a jar has no way to know it is the one that was
+        # built, unless there is a checksum published next to it.
+        run: |
+          set -euo pipefail
+          cd build/dist
+          sha256sum ./*.jar | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          notes_file="$RUNNER_TEMP/notes.md"
+          {
+            echo "macroEngine **${VERSION}** — one core pack plus 19 modules."
+            echo
+            python3 tools/summarize.py modules.json \
+              --source "${SOURCE_REPO}/${SOURCE_PACK}"
+            echo
+            echo "### Installing"
+            echo
+            echo "Every jar is a data pack. Drop the ones you want into the world's"
+            echo "\`datapacks/\` directory:"
+            echo
+            echo '```'
+            echo "world/datapacks/"
+            echo "  me_core_module-${VERSION}.jar        <- required"
+            echo "  me_cmd_module-${VERSION}.jar         <- add the features you want"
+            echo "  ..."
+            echo '```'
+            echo
+            echo "\`me_core_module\` is required by every other pack. Without it the"
+            echo "modules load and do nothing, because each one attaches to it through"
+            echo "the hook tags in \`data/me_core_module/tags/function/hook/\`."
+            echo
+            echo "Verify a download against \`SHA256SUMS.txt\`."
+          } > "$notes_file"
+
+          # `--verify-tag` makes a manual run fail rather than silently creating
+          # the tag from the current default branch.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error title=Release exists::${TAG} already has a release. Releases are immutable here;"
+            echo "::error::bump the version instead of overwriting one people may already have."
+            exit 1
+          fi
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "macroEngine modules ${VERSION}" \
+            --notes-file "$notes_file" \
+            --verify-tag \
+            build/dist/*.jar build/dist/SHA256SUMS.txt

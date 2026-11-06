@@ -1,0 +1,4 @@
+{
+  "commands.op.message": "Nivel de operador establecido en %s.",
+  "commands.op.failed": "No se pudo establecer el nivel de operador."
+}

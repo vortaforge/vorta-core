@@ -1,0 +1,9 @@
+{
+  "entity": "this",
+  "predicate": {
+    "effects": {
+      "minecraft:mining_fatigue": {}
+    }
+  },
+  "type": "minecraft:entity_properties"
+}

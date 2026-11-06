@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mod guides — VortaForge Docs</title>
+<meta name="description" content="Installation and configuration guides for the VortaForge Fabric mods: afk-manager and join-throttle.">
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfd; --fg:#16181d; --muted:#5b6270; --line:#e2e5ec; --card:#fff;
+          --accent:#2563eb; --code:#f3f4f7; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1014; --fg:#e8eaf0; --muted:#9aa3b2; --line:#252a33; --card:#151920;
+            --accent:#7ab7ff; --code:#1b2028; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; padding:34px 20px 80px; }
+  h1 { font-size:2rem; margin:0 0 8px; letter-spacing:-0.02em; }
+  h2 { font-size:1.32rem; margin:42px 0 12px; padding-top:20px; border-top:1px solid var(--line); }
+  h3 { font-size:1.04rem; margin:26px 0 8px; }
+  .sub { color:var(--muted); margin:0 0 6px; font-size:15px; }
+  a { color:var(--accent); }
+  code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:var(--code); padding:2px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+        overflow-x:auto; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  .note { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent);
+          border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin:18px 0; }
+  .card { display:block; background:var(--card); border:1px solid var(--line); border-radius:10px;
+          padding:18px 20px; text-decoration:none; color:inherit; transition:border-color .15s; }
+  .card:hover { border-color:var(--accent); }
+  .card p { margin:0; color:var(--muted); font-size:14px; }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mod guides</h1>
+  <p class="sub">Two Fabric mods are live and supported. Everything else in this
+     project is archived history.</p>
+
+  <div class="grid">
+    <a class="card" href="afk-manager.html">
+      <h3>afk-manager</h3>
+      <p>Detects genuinely idle players from motion samples, announces AFK state, and
+         can disconnect after a longer timeout.</p>
+    </a>
+    <a class="card" href="join-throttle.html">
+      <h3>join-throttle</h3>
+      <p>Rate-limits connection attempts per source address before a join completes,
+         with per-address exemptions.</p>
+    </a>
+  </div>
+
+  <h2>Installing either mod</h2>
+  <p>Both are Fabric mods. The steps are identical:</p>
+  <ol>
+    <li>Install the <strong>Fabric loader</strong> for the Minecraft version listed on
+        the <a href="../docs/versions.html">version matrix</a> (26.1.x for both).</li>
+    <li>Put the <a href="https://github.com/vortaforge/core/releases">released jar</a>
+        into <code>mods/</code> in your server directory.</li>
+    <li>Start the server once. The mod writes its settings file into
+        <code>config/</code> on first run.</li>
+    <li>Edit the JSON, restart, and check the log line the mod prints at startup.</li>
+  </ol>
+
+  <div class="note">
+    <strong>Both mods are server-side.</strong> Players do not need to install them,
+    and a vanilla client can connect. That also means the mod cannot protect against
+    anything that happens after the connection is accepted.
+  </div>
+
+  <h2>Reading a settings file</h2>
+  <p>Each mod writes a plain JSON object. Both run every value through a
+     <code>sanitized()</code> method before using it, which means:</p>
+  <ul>
+    <li>An out-of-range number is clamped, not fatal. The server starts.</li>
+    <li>A missing key falls back to the default rather than becoming zero.</li>
+    <li>If the file is unreadable or malformed, the defaults are used and the mod says
+        so in the log &mdash; it does not silently run with an empty configuration.</li>
+  </ul>
+
+  <footer>
+    VortaForge &middot; Unlicense &middot;
+    <a href="../index.html">docs home</a> &middot;
+    <a href="../docs/api.html">API reference</a>
+  </footer>
+</div>
+</body>
+</html>

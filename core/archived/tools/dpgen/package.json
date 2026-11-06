@@ -1,0 +1,20 @@
+{
+  "name": "dpgen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "builder.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "VortaForge",
+  "license": "Unlicense",
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "archiver": "^8.0.0",
+    "js-yaml": "^5.2.2"
+  },
+  "overrides": {
+    "minimatch": ">=11.0.1"
+  }
+}

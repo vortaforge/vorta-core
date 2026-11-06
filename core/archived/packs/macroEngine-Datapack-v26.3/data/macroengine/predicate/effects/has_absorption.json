@@ -1,0 +1,9 @@
+{
+  "entity": "this",
+  "predicate": {
+    "effects": {
+      "minecraft:absorption": {}
+    }
+  },
+  "type": "minecraft:entity_properties"
+}

@@ -1,0 +1,32 @@
+{
+  "macroengine.perm.denied": {
+    "sounds": [
+      {
+        "name": "macroengine:perm_denied",
+        "volume": 0.6,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "macroengine.subtitle.perm_denied"
+  },
+  "macroengine.ui.freeze": {
+    "sounds": [
+      {
+        "name": "macroengine:ui_freeze",
+        "volume": 0.9,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "macroengine.subtitle.freeze"
+  },
+  "macroengine.ui.unfreeze": {
+    "sounds": [
+      {
+        "name": "macroengine:ui_unfreeze",
+        "volume": 0.7,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "macroengine.subtitle.unfreeze"
+  }
+}

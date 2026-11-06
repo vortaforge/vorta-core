@@ -1,0 +1,19 @@
+{
+  "item.macroengine.config_key": "Config Key",
+  "item.macroengine.config_key.lore": "macroEngine utility item",
+  "item.macroengine.marker_tag": "Marker Tag",
+  "item.macroengine.marker_tag.lore": "macroEngine utility item",
+  "item.macroengine.repair_kit": "Repair Kit",
+  "item.macroengine.repair_kit.lore": "macroEngine utility item",
+  "macroengine.msg.freeze": "You have been frozen",
+  "macroengine.msg.no_perm": "— you don't have this permission.",
+  "macroengine.msg.permission_denied": "Permission denied.",
+  "macroengine.msg.unfreeze": "You have been unfrozen",
+  "macroengine.subtitle.freeze": "Frozen",
+  "macroengine.subtitle.perm_denied": "Permission denied",
+  "macroengine.subtitle.unfreeze": "Unfrozen",
+  "macroengine.msg.audit_header": "Audit log (latest 10 entries)",
+  "macroengine.msg.audit_empty": "Audit log is empty.",
+  "macroengine.msg.audit_cleared": "Audit log cleared.",
+  "macroengine.msg.require_invalid": "Invalid permission name."
+}

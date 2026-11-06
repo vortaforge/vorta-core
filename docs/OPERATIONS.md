@@ -150,3 +150,38 @@ python3 scripts/sync.py --org vortaforge        # dry run: what would change
 The dry run performs real discovery and real comparison; only the write is
 skipped. It is the same code path the workflow uses, so a clean dry run is a
 meaningful signal rather than a smoke test.
+
+## The mirror
+
+`sync.yml` mirrors every repository's default branch into a directory named after
+it (`core/`, `docs/`, `.github/`, `macroengine-modules/`, `vorta-core/`). Each
+tree carries a `.mirror.json` recording the commit, branch and time.
+
+To force a full re-mirror of one repository:
+
+```bash
+rm -rf core && python3 scripts/mirror.py --org vortaforge --apply --only core
+```
+
+### What breaks, and what it looks like
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `gh: To use GitHub CLI in a GitHub Actions workflow, set the GH_TOKEN` | the mirror step ran before the token was exported | check the step's `env:` block |
+| `mirror: vortaforge/x would overwrite N file(s)` | a repository now has a flat tree whose names match ours | rename the mirror or the repository; the guard is protecting real files |
+| a file appears twice with two different contents | one copy is this repository's, one is a mirror's | the mirror only removes what its manifest lists; delete the stale copy by hand |
+| `vorta-core/vorta-core/` appears | the self-exclusion was removed | restore it in `copy_tree`; each run otherwise nests one level deeper |
+
+### Reading a mirror
+
+A mirrored tree is a snapshot, not a checkout. It has no `.git`, `git blame` on it
+blames the sync commit, and editing a file there changes nothing upstream — the
+next run overwrites it. Always edit in the source repository.
+
+### Cost
+
+`vortaforge/core` is the only large one: ~5 300 files, ~10 MB per snapshot. A
+shallow clone of each repository is the whole cost of a run, about five seconds.
+Git stores it well, but this repository will grow by roughly the size of the
+organization's working trees on the first commit — that is the trade being made
+for having the source readable in one place.

@@ -1,0 +1,13 @@
+{
+  "pack": {
+    "description": "macroEngine | 26.3 | data pack bundled in the macroEngine Fabric mod",
+    "min_format": [
+      121,
+      0
+    ],
+    "max_format": [
+      121,
+      0
+    ]
+  }
+}

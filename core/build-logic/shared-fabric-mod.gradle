@@ -1,0 +1,107 @@
+// =============================================================================
+// vortaforge/core - build-logic/shared-fabric-mod.gradle
+//
+// Shared script, applied with an `apply from:` line pointing back at this
+// file - the exact relative path differs by depth (mods/*/build.gradle uses
+// "${projectDir}/../../build-logic/...", while
+// packs/RTWrapper/rtwrapper-fabric/build.gradle - one directory deeper -
+// uses "${projectDir}/../../../build-logic/..."). projectDir-relative, not
+// ${rootDir}, so this also resolves if a consumer is ever built standalone
+// via its own settings.gradle - NOT a precompiled script plugin. That
+// distinction matters here: a precompiled plugin
+// (`plugins { id "fabric-api.loom" }`, the pattern FabricMC/fabric-api's
+// build-logic uses) fixes the Fabric Loom *plugin version* once for every
+// consumer, which only works because every fabric-api module targets one
+// Minecraft version. The consumers of this file deliberately don't:
+// datapack-blocker and the excluded historical rtwrapper-fabric target
+// MC 1.21.1 (obfuscated, needs Yarn mappings), while
+// opmod-example/TEMPLATE-MOD target MC 26.x (ships unobfuscated, no Yarn
+// layer) on newer/SNAPSHOT Loom. `apply from:` runs this file's script body
+// against whichever project applies it, using the loom/maven-publish
+// plugins THAT PROJECT already declared in its own `plugins {}` block - so
+// per-project Loom version pinning keeps working exactly as it does today.
+//
+// This file only factors out the parts that were previously copy-pasted
+// identically across mods/datapack-blocker, examples/opmod-example,
+// mods/TEMPLATE-MOD, and the historical packs/RTWrapper/rtwrapper-fabric
+// build (the latter remains excluded by settings.gradle):
+//   - the fabric.mod.json version-expansion processResources block
+//   - withSourcesJar()
+//   - the basic mavenJava publishing{} publication
+//
+// Deliberately NOT here (left in each mod's own build.gradle, because they
+// differ or are load-bearing per-project):
+//   - the `plugins {}` block itself (each mod pins its own Loom version)
+//   - `version`/`group`/`base.archivesName` assignment
+//   - the `dependencies {}` block (mappings vs. no-mappings differs; see
+//     opmod-example's build.gradle for why it's plain `implementation` with
+//     no `mappings "..."` line)
+//   - `sourceCompatibility`/`targetCompatibility`/`options.release` (differs:
+//     21 for datapack-blocker, 25 for opmod-example/TEMPLATE-MOD)
+//   - `jar { from("LICENSE") {...} }` (only present where a LICENSE file
+//     actually exists in that subproject - referencing a missing file here
+//     unconditionally would fail every consumer's jar task)
+//   - `loom {}` special-cases like TEMPLATE-MOD's splitEnvironmentSourceSets()
+//     and named-mod sourceSet wiring
+//
+// Applying project must already have set `version` and declare the
+// `java-library`/loom-provided `java{}` extension and a `processResources`
+// task (i.e. must already have the fabric-loom and maven-publish plugins
+// applied via its own `plugins {}` block) before this file is applied.
+// =============================================================================
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+java {
+    withSourcesJar()
+}
+
+// Reproducible archives: identical sources must produce byte-identical
+// jars (and sources jars), independent of file mtimes or filesystem
+// iteration order. Makes release artifacts checksum-verifiable by anyone
+// who rebuilds from the same commit, which fits the repo's provenance /
+// watermark approach.
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            // NOTE: maven-publish's own default for artifactId is
+            // project.name (the subproject directory name), NOT
+            // base.archivesName/archivesBaseName - Gradle does this
+            // deliberately, it does not fall back to archivesBaseName. This
+            // reads base.archivesName explicitly instead, which resolves to
+            // whatever each consumer already configured: for
+            // examples/opmod-example (which sets
+            // `base { archivesName = project.archives_base_name }`) that's
+            // "opmod", not the directory name "opmod-example"; for
+            // mods/datapack-blocker and mods/TEMPLATE-MOD
+            // (none of which set base.archivesName) it's the Gradle default
+            // of project.name, matching what their jar filenames already use
+            // - so this keeps every mod's published artifactId consistent
+            // with its own jar's archivesBaseName, in both directions,
+            // without needing to know which mods opted into a custom one.
+            // (project.archivesBaseName was the `base` plugin's convenience
+            // accessor for this same value; it was deprecated in Gradle 8 and
+            // removed entirely in Gradle 9/10, which is what broke this line
+            // - base.archivesName is the direct Property<String> it always
+            // delegated to, so this is a like-for-like replacement, not a
+            // behavior change.)
+            artifactId base.archivesName.get()
+            from components.java
+        }
+    }
+
+    repositories {
+        // Add repositories to publish to here.
+    }
+}

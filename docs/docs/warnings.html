@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pack warnings — VortaForge Docs</title>
+<meta name="description" content="Why VortaForge datapacks are archived and disarmed, what that means for you, and how the in-pack gate and warning work.">
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfd; --fg:#16181d; --muted:#5b6270; --line:#e2e5ec; --card:#fff;
+          --warn:#b45309; --warnbg:#fff7ed; --warnline:#fdba74; --accent:#2563eb; --code:#f3f4f7; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1014; --fg:#e8eaf0; --muted:#9aa3b2; --line:#252a33; --card:#151920;
+            --warn:#fbbf24; --warnbg:#241a08; --warnline:#7c4a03; --accent:#7ab7ff; --code:#1b2028; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+  .banner { display:flex; gap:14px; align-items:flex-start; background:var(--warnbg);
+            border:1px solid var(--warnline); border-left-width:5px; border-radius:10px;
+            padding:16px 18px; margin:0 0 28px; }
+  .banner .icon { font-size:22px; line-height:1.2; }
+  .banner strong { color:var(--warn); display:block; margin-bottom:4px; }
+  .banner p { margin:0; font-size:14.5px; color:var(--fg); }
+  h1 { font-size:2rem; line-height:1.25; margin:0 0 8px; letter-spacing:-0.02em; }
+  h2 { font-size:1.3rem; margin:40px 0 10px; padding-top:20px; border-top:1px solid var(--line); letter-spacing:-0.01em; }
+  h3 { font-size:1.05rem; margin:26px 0 8px; }
+  p, li { color:var(--fg); }
+  .sub { color:var(--muted); font-size:15px; margin:0 0 8px; }
+  code, pre { font-family: ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:var(--code); padding:2px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px;
+        padding:14px 16px; overflow-x:auto; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:0.04em; }
+  a { color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin:16px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin:18px 0; }
+  .grid a.card { display:block; text-decoration:none; color:inherit; transition:border-color .15s; }
+  .grid a.card:hover { border-color:var(--accent); }
+  .grid .card h3 { margin:0 0 6px; }
+  .grid .card p { margin:0; color:var(--muted); font-size:14px; }
+  .pill { display:inline-block; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px;
+          border:1px solid var(--line); color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; }
+  .pill.no { color:var(--warn); border-color:var(--warnline); background:var(--warnbg); }
+  .pill.yes { color:#15803d; border-color:#86efac; background:#f0fdf4; }
+  @media (prefers-color-scheme: dark) {
+    .pill.yes { color:#4ade80; border-color:#166534; background:#0b1f12; }
+  }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line);
+           color:var(--muted); font-size:13.5px; }
+  .toc { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 20px; margin:22px 0; }
+  .toc ol { margin:8px 0 0; padding-left:20px; }
+  .toc li { margin:3px 0; font-size:14.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="banner" role="alert">
+    <span class="icon" aria-hidden="true">&#9888;&#65039;</span>
+    <div>
+      <strong>Every datapack in this project is archived and disarmed.</strong>
+      <p>Nothing here is maintained, supported or recommended for a live server.
+         The packs are kept as readable history. If you are reading this because you
+         clicked a link inside a pack's chat message, that is working as intended &mdash;
+         the pack is telling you it is switched off.</p>
+    </div>
+  </div>
+
+  <h1>Pack warnings</h1>
+  <p class="sub">Why the datapacks are archived, what <em>disarmed</em> actually means,
+     and how the in-pack gate behaves.</p>
+
+  <div class="toc">
+    <strong>On this page</strong>
+    <ol>
+      <li><a href="#notice">What you clicked</a></li>
+      <li><a href="#disarmed">What "disarmed" means</a></li>
+      <li><a href="#gate">How the gate works</a></li>
+      <li><a href="#version">Why some packs cannot show the warning</a></li>
+      <li><a href="#you-should">If you still want to run a pack</a></li>
+      <li><a href="#other-docs">Other documentation</a></li>
+    </ol>
+  </div>
+
+  <h2 id="notice">1. What you clicked</h2>
+  <p>You followed an <code>open_url</code> click event from inside a Minecraft chat
+     message. Every VortaForge datapack that supports it prints a warning on load,
+     and that warning contains a clickable link to this page. The message is not an
+     error and nothing is broken &mdash; it is a deliberate, permanent notice.</p>
+
+  <p>The exact text depends on the pack, but the shape is always the same:</p>
+
+  <pre><code>[PackName] archived &amp; disarmed — not supported, not recommended.
+            Click here to read why.</code></pre>
+
+  <p>The clickable part is a text component in the modern <code>click_event</code>
+     form, which Minecraft renamed from <code>clickEvent</code> in 1.21.5
+     (snapshot 25w02a). The <code>open_url</code> action takes <code>url</code>
+     instead of the old <code>value</code>:</p>
+
+  <pre><code>{"text":"Click here to read why.",
+ "click_event":{"action":"open_url","url":"https://vortaforge.github.io/docs/docs/warnings.html"}}</code></pre>
+
+  <p>Before 1.21.5 the same thing was written
+     <code>{"action":"open_url","value":"..."}</code> inside a field called
+     <code>clickEvent</code>. The two are not interchangeable: a pack built for
+     format 71 (1.21.5) or newer must use <code>click_event</code>, and a pack
+     built for an older format must not.</p>
+
+  <h2 id="disarmed">2. What "disarmed" means</h2>
+  <p><strong>Disarmed</strong> is a specific, checked property in this repository, not
+     a feeling. Every archived project is registered in
+     <code>archived/archive.json</code> with <code>"disarmed": true</code>, and a
+     validator enforces it:</p>
+
+  <table>
+    <thead><tr><th>Property</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>status</code></td><td><code>archived</code>, <code>frozen</code> or <code>superseded</code></td></tr>
+      <tr><td><code>disarmed</code></td><td>The pack must not be built, packaged or deployed by any workflow.</td></tr>
+      <tr><td><code>deploy</code></td><td><code>not_recommended</code> for every pack in this project.</td></tr>
+      <tr><td><code>original_path</code></td><td>Where the pack used to live live; must <em>not</em> exist any more.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Concretely, this means:</p>
+  <ul>
+    <li>No release contains these packs. The publishing job that used to build and
+        upload pack ZIPs is disabled.</li>
+    <li>No Gradle task packages them. <code>archived/</code> is deliberately not a
+        scan root in <code>settings.gradle</code>, so an archived pack can never
+        silently become a buildable subproject again.</li>
+    <li>The website does not list them as downloads.</li>
+    <li>The repository guard refuses new datapack content and refuses to revive
+        archived tooling.</li>
+  </ul>
+
+  <h2 id="gate">3. How the gate works</h2>
+  <p>"Gate" in this project means one of two things, and both are real mechanisms
+     rather than a label in a README.</p>
+
+  <h3>The in-pack load gate</h3>
+  <p>A gated pack does not run until a player consents. The pattern, as implemented
+     in the largest pack, is a single authoritative score that anything else may
+     query:</p>
+
+  <pre><code># macroengine:gate/is_open
+# Answers whether the pack is usable, without printing anything.
+# Deliberately has NO gate guard: its whole job is to answer while the pack is closed.
+execute if score #macroengine.open vortaforge.gate matches 1 run return 1
+return 0</code></pre>
+
+  <p>Callers check it before relying on the pack:
+     <code>execute if function macroengine:gate/is_open run function mypack:use_it</code>.
+     The gate has a consent prompt, a decline path, a permit list and a way to
+     revoke, so "closed" is the default and opening it is an explicit act.</p>
+
+  <p>Packs that never had a gate now carry the archived warning described above.
+     A warning is <em>not</em> a security boundary: it tells the truth about the
+     pack's status, it does not make an ungated pack safe. Do not read a warning as
+     an audit.</p>
+
+  <h3>The repository guard</h3>
+  <p>Separately, <code>scripts/repo/datapack_guard.py</code> is a fail-closed check
+     that runs in <code>pre-commit</code>, <code>pre-push</code>, CI and Gradle. It
+     refuses new datapack content, revived archived tooling, blocklisted accounts,
+     a tripped kill switch and an inconsistent archive registry. That guard protects
+     the repository; it cannot protect a world that already has a pack installed.</p>
+
+  <h2 id="version">4. Why some packs cannot show the warning</h2>
+  <p><code>click_event</code> arrived in Minecraft 1.21.5, data pack format 71.
+     A pack targeting an older format physically cannot render a clickable link in
+     the new syntax, and writing the new syntax into an old pack would break it.
+     So the warning has two renderings:</p>
+
+  <table>
+    <thead><tr><th>Target</th><th>Format</th><th>Warning rendering</th></tr></thead>
+    <tbody>
+      <tr><td>1.21.5 and newer</td><td>&ge; 71</td><td><code>click_event</code> link to this page</td></tr>
+      <tr><td>1.21.4 and older</td><td>&lt; 71</td><td>plain chat warning plus an unpaginated URL</td></tr>
+      <tr><td>1.20.5 and older</td><td>&le; 41</td><td>plain warning; <code>functions/</code> directory layout</td></tr>
+    </tbody>
+  </table>
+
+  <p>The plain rendering says the same thing. It only lacks the click target. This
+     is honest about a real constraint instead of shipping a command that would
+     error on the version the pack was written for.</p>
+
+  <h2 id="you-should">5. If you still want to run a pack</h2>
+  <p>You can. Nothing here is remotely disabled, and a datapack is just files. But
+     understand what you are accepting:</p>
+  <ul>
+    <li><strong>No support.</strong> Issues will be closed as out of scope.</li>
+    <li><strong>No fixes.</strong> Bugs in archived packs are not going to be fixed.</li>
+    <li><strong>Old formats are genuinely old.</strong> Some of these packs target
+        Minecraft 1.16.2&ndash;1.19.4. Modern versions changed directory layouts
+        (<code>functions/</code> became <code>function/</code> in 1.21), text
+        components, and command syntax. A pack that loads may still do nothing.</li>
+    <li><strong>Back up the world first.</strong> Datapacks run commands with the
+        server's permissions. That is not a VortaForge-specific risk; it is what
+        datapacks are.</li>
+  </ul>
+
+  <div class="card">
+    <h3 style="margin-top:0">The one thing worth taking away</h3>
+    <p style="margin-bottom:0">A chat warning tells you a pack's maintenance status.
+       It does not tell you the pack is safe to run, and it does not gate anything.
+       The gate is the consent flow; the warning is the label on the box.</p>
+  </div>
+
+  <h2 id="other-docs">6. Other documentation</h2>
+  <div class="grid">
+    <a class="card" href="../index.html">    <h3>Documentation index</h3><p>Everything, organised by audience.</p></a>
+    <a class="card" href="../docs/api.html"><h3>API reference</h3><p>Mod config, commands and pack interop.</p></a>
+    <a class="card" href="../mods/"><h3>Mod guides</h3><p>afk-manager and join-throttle, end to end.</p></a>
+    <a class="card" href="../docs/maintainers.html"><h3>Maintainer guide</h3><p>Gates, releases, archive rules.</p></a>
+  </div>
+
+  <footer>
+    VortaForge &middot; Unlicense &middot;
+    <a href="https://github.com/vortaforge/docs">source for this site</a> &middot;
+    <a href="https://github.com/vortaforge/core">vortaforge/core</a>
+  </footer>
+</div>
+</body>
+</html>

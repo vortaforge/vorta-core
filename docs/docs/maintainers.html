@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maintainer guide — VortaForge Docs</title>
+<meta name="description" content="How the VortaForge guard, gates, release flow and archive rules work, and what a maintainer has to run.">
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfd; --fg:#16181d; --muted:#5b6270; --line:#e2e5ec; --card:#fff;
+          --accent:#2563eb; --code:#f3f4f7; --warn:#b45309; --warnbg:#fff7ed; --warnline:#fdba74; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1014; --fg:#e8eaf0; --muted:#9aa3b2; --line:#252a33; --card:#151920;
+            --accent:#7ab7ff; --code:#1b2028; --warn:#fbbf24; --warnbg:#241a08; --warnline:#7c4a03; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; padding:34px 20px 80px; }
+  h1 { font-size:2rem; margin:0 0 8px; letter-spacing:-0.02em; }
+  h2 { font-size:1.32rem; margin:42px 0 12px; padding-top:20px; border-top:1px solid var(--line); letter-spacing:-0.01em; }
+  h3 { font-size:1.04rem; margin:26px 0 8px; }
+  .sub { color:var(--muted); margin:0 0 6px; font-size:15px; }
+  a { color:var(--accent); }
+  code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:var(--code); padding:2px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+        overflow-x:auto; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  td code { white-space:nowrap; }
+  .note { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent);
+          border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox { background:var(--warnbg); border:1px solid var(--warnline); border-left:4px solid var(--warnline);
+             border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox strong { color:var(--warn); }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Maintainer guide</h1>
+  <p class="sub">The guard, the gates, the release flow and the archive rules &mdash;
+     what is enforced by code and what is only a convention.</p>
+
+  <div class="note">
+    <strong>Read this before changing anything.</strong> Almost every rule below is
+    backed by a check that will fail your build or your commit. That is deliberate:
+    a policy that only lives in a document gets skipped under deadline pressure.
+  </div>
+
+  <h2 id="guard">The repository guard</h2>
+  <p><code>scripts/repo/datapack_guard.py</code> is a fail-closed check that runs in
+     <code>pre-commit</code>, <code>pre-push</code>, CI (job <code>datapack-guard</code>)
+     and Gradle (<code>guardArchives</code>). It refuses:</p>
+  <ul>
+    <li>new datapack content under a live path;</li>
+    <li>revived archived tooling;</li>
+    <li>blocklisted accounts (by login <em>and</em> by numeric user id);</li>
+    <li>a tripped kill switch;</li>
+    <li>an archive registry that disagrees with the tree.</li>
+  </ul>
+
+  <p>The hooks are <strong>off by default</strong>. Nothing is blocked until
+     <code>git config core.hooksPath scripts/git/hooks</code> has been run, and even
+     then <code>--no-verify</code> bypasses them. The real gate is CI, not the hook.</p>
+
+  <h2 id="archive">Archive rules</h2>
+  <p>Archived content is frozen read-only history. Concretely:</p>
+  <table>
+    <thead><tr><th>Rule</th><th>Enforced by</th></tr></thead>
+    <tbody>
+      <tr><td>Every archived project is registered in <code>archived/archive.json</code></td><td><code>check_archive.py</code></td></tr>
+      <tr><td><code>original_path</code> must no longer exist</td><td><code>check_archive.py</code></td></tr>
+      <tr><td>No workflow may live under <code>archived/</code></td><td><code>check_archive.py</code></td></tr>
+      <tr><td>A registered path must start with <code>archived/</code></td><td><code>check_archive.py</code></td></tr>
+      <tr><td>A non-datapack successor must resolve to a real path</td><td><code>check_archive.py</code> + tests</td></tr>
+      <tr><td><code>archived/</code> is not a Gradle scan root</td><td><code>settings.gradle</code></td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Do not revive archived content.</strong> If something archived is needed
+     again, it comes back as a new project with its own review, not by flipping a flag.
+     The one exception this project made deliberately is documented: warnings were
+     added to archived packs to tell players the truth about their status, and that
+     change is recorded rather than presented as routine maintenance.</p>
+
+  <h2 id="gates">The two kinds of gate</h2>
+  <h3>In-pack load gate</h3>
+  <p>A consent flow: the pack does not operate until a player agrees, and other packs
+     query it through <code>gate/is_open</code>. This is a runtime behaviour inside a
+     datapack. It cannot be enforced by the repository.</p>
+
+  <h3>Repository gate</h3>
+  <p>The guard and the archive validator. This protects the <em>repository</em>. It has
+     no effect on a world that already has a pack installed, and no effect on a fork.
+     Saying otherwise would be the exact overclaim this project has corrected before:
+     policy distribution is not the same as enforcement.</p>
+
+  <h2 id="release">Release flow</h2>
+  <ol>
+    <li>Tests must pass: <code>python3 -m unittest discover -s scripts/tests</code>.</li>
+    <li><code>python3 scripts/repo/check_archive.py --strict</code>.</li>
+    <li><code>python3 scripts/repo/datapacks_disable.py verify</code>.</li>
+    <li>Workflow lint (<code>actionlint</code>) and <code>bash -n</code> on shell scripts.</li>
+    <li>Release publishing stays disabled until an append-only design is reviewed.
+        The job is present but gated with <code>if: false</code> &mdash; that is a
+        deliberate policy marker, not a bug to "fix".</li>
+  </ol>
+
+  <h2 id="backups">Backups</h2>
+  <p><code>scripts/ops/backup-org.sh</code> is run by a workflow. Two properties are
+     structural rather than conventional:</p>
+  <ul>
+    <li>The dependency is pinned and hash-verified, installed into a private virtual
+        environment, and the install runs with the token variables stripped from the
+        environment. An untrusted package install never sees the credential.</li>
+    <li>Encryption defaults to <code>gpg</code>. Asking for an unencrypted archive
+        while the artifact leaves the machine is refused outright, not warned about.</li>
+  </ul>
+
+  <h2 id="honesty">What this project will not claim</h2>
+  <ul>
+    <li>A green build does not prove a site deployed. Fetch the published artifact.</li>
+    <li>A label does not silence a security check.</li>
+    <li>A warning is not an audit, and a gate is not a sandbox.</li>
+    <li>Partial or paginated data is never presented as complete; a check that could
+        not run reports that it could not run.</li>
+  </ul>
+
+  <footer>
+    VortaForge &middot; Unlicense &middot;
+    <a href="../index.html">docs home</a> &middot;
+    <a href="archive.html">archive register</a> &middot;
+    <a href="warnings.html">pack warnings</a>
+  </footer>
+</div>
+</body>
+</html>

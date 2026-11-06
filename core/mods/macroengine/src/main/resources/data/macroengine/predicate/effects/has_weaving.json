@@ -1,0 +1,9 @@
+{
+  "entity": "this",
+  "predicate": {
+    "effects": {
+      "minecraft:weaving": {}
+    }
+  },
+  "type": "minecraft:entity_properties"
+}

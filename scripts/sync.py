@@ -205,12 +205,18 @@ def main(argv: list[str]) -> int:
         for name in summary["deleted"]:
             by_name.pop(name, None)
 
-        out = {
+        # Carry forward every key this script does not own. `mirrors` is written
+        # by mirror.py, which runs after this one; rebuilding the document from
+        # a literal dict silently deleted it, and the next mirror run then had no
+        # record of the trees it had already written.
+        out = {k: v for k, v in index.items() if k not in {
+            "org", "generatedAt", "count", "repositories"}}
+        out.update({
             "org": args.org,
             "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "count": len(by_name),
             "repositories": [by_name[n] for n in sorted(by_name, key=str.lower)],
-        }
+        })
         args.index.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
 
     print(json.dumps(summary, indent=2))

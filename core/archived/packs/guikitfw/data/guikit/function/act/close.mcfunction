@@ -1,0 +1,1 @@
+function guikit:api/close

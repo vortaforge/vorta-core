@@ -1,0 +1,23 @@
+{
+  "files": 11,
+  "bytes": 79879,
+  "symlinksDropped": 0,
+  "paths": [
+    ".github/workflows/pages.yml",
+    "README.md",
+    "docs/api.html",
+    "docs/archive.html",
+    "docs/maintainers.html",
+    "docs/versions.html",
+    "docs/warnings.html",
+    "index.html",
+    "mods/afk-manager.html",
+    "mods/index.html",
+    "mods/join-throttle.html"
+  ],
+  "repo": "vortaforge/docs",
+  "branch": "main",
+  "commit": "ee2dcc7a632afdf046230e280c22a7a5b44c6007",
+  "syncedAt": "2026-11-06T18:20:48.331221Z",
+  "note": "Snapshot of the default branch. Read-only: do not edit here."
+}

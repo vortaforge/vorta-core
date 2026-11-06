@@ -1,0 +1,491 @@
+{
+  "namespace": "vorta",
+  "menu_id": "full",
+  "display_name": "Full Feature Showcase",
+  "timer_ticks": 1200,
+  "follow": true,
+  "distance_close": 24,
+  "pack_description": "Exhaustive guigenmc showcase: every widget kind, every condition type, costs, cooldowns, triggers.",
+  "container": {
+    "type": "chest_minecart",
+    "y_offset": 0.6,
+    "invulnerable": true,
+    "no_gravity": true,
+    "silent": true
+  },
+  "default_filler": "minecraft:black_stained_glass_pane",
+  "extra_scores": ["srv_points"],
+  "message_prefix": { "text": "[Showcase] ", "color": "gold" },
+  "on_open": ["playsound minecraft:block.amethyst_block.chime master @s ~ ~ ~ 0.5 1.4"],
+  "on_close": [],
+  "pages": [
+    {
+      "index": 0,
+      "name": "Home",
+      "widgets": [
+        {
+          "kind": "label",
+          "slot": 0,
+          "item": "minecraft:book",
+          "name": { "text": "Feature Showcase", "color": "aqua", "bold": true },
+          "lore": [
+            { "text": "Every widget kind and every", "color": "gray", "italic": false },
+            { "text": "condition type in one menu.", "color": "gray", "italic": false }
+          ]
+        },
+        {
+          "kind": "button",
+          "slot": 1,
+          "action_id": "warp_spawn",
+          "item": "minecraft:beacon",
+          "name": { "text": "Warp: Spawn", "color": "green" },
+          "commands": ["tp @s 0 -60 0"],
+          "sound": "minecraft:entity.enderman.teleport",
+          "success_message": { "text": "Warped to spawn.", "color": "green" }
+        },
+        {
+          "kind": "button",
+          "slot": 2,
+          "action_id": "nether_gate",
+          "item": "minecraft:obsidian",
+          "name": { "text": "Nether Gate", "color": "light_purple" },
+          "lore": [{ "text": "dimension condition", "color": "dark_gray", "italic": false }],
+          "commands": ["tp @s 100 40 100"],
+          "condition": {
+            "type": "dimension",
+            "dimension": "the_nether",
+            "fail_message": { "text": "Only works while you are in the Nether.", "color": "red" }
+          }
+        },
+        {
+          "kind": "button",
+          "slot": 3,
+          "action_id": "sunshine_check",
+          "item": "minecraft:sunflower",
+          "name": { "text": "Sunny Day Only", "color": "yellow" },
+          "lore": [{ "text": "weather condition (clear)", "color": "dark_gray", "italic": false }],
+          "commands": ["say The sun is out!"],
+          "condition": {
+            "type": "weather",
+            "weather": "clear",
+            "fail_message": { "text": "It is not clear skies right now.", "color": "red" }
+          }
+        },
+        {
+          "kind": "separator",
+          "slot": 4,
+          "item": "minecraft:light_blue_stained_glass_pane",
+          "name": { "text": " ", "color": "gray" }
+        },
+        {
+          "kind": "button",
+          "slot": 5,
+          "action_id": "storm_check",
+          "item": "minecraft:trident",
+          "name": { "text": "Thunderstruck", "color": "blue", "enchanted": true },
+          "lore": [{ "text": "weather condition (thunder)", "color": "dark_gray", "italic": false }],
+          "commands": ["effect give @s glowing 200 0"],
+          "condition": {
+            "type": "weather",
+            "weather": "thunder",
+            "fail_message": { "text": "Only during a thunderstorm.", "color": "red" }
+          }
+        },
+        {
+          "kind": "button",
+          "slot": 6,
+          "action_id": "diamond_trade",
+          "item": "minecraft:diamond",
+          "name": { "text": "Trade 2 Diamonds", "color": "aqua" },
+          "lore": [{ "text": "item_count_gte condition + item cost", "color": "dark_gray", "italic": false }],
+          "commands": ["give @s netherite_ingot 1"],
+          "condition": {
+            "type": "item_count_gte",
+            "item": "minecraft:diamond",
+            "min_count": 2,
+            "fail_message": { "text": "You need at least 2 diamonds.", "color": "red" }
+          },
+          "cost": {
+            "item": "minecraft:diamond",
+            "count": 2,
+            "fail_message": { "text": "Cost: 2 diamonds.", "color": "red" }
+          },
+          "success_message": { "text": "Trade complete!", "color": "green" }
+        },
+        {
+          "kind": "button",
+          "slot": 7,
+          "action_id": "vip_lounge",
+          "item": "minecraft:golden_apple",
+          "name": { "text": "VIP Lounge", "color": "gold" },
+          "lore": [{ "text": "has_tag condition", "color": "dark_gray", "italic": false }],
+          "commands": ["effect give @s regeneration 300 1"],
+          "condition": {
+            "type": "has_tag",
+            "tag": "vip",
+            "fail_message": { "text": "VIP members only.", "color": "red" }
+          }
+        },
+        {
+          "kind": "button",
+          "slot": 8,
+          "action_id": "build_mode",
+          "item": "minecraft:bricks",
+          "name": { "text": "Builders Only", "color": "dark_green" },
+          "lore": [{ "text": "gamemode condition", "color": "dark_gray", "italic": false }],
+          "commands": ["give @s oak_planks 64"],
+          "condition": {
+            "type": "gamemode",
+            "gamemode": "creative",
+            "fail_message": { "text": "Creative mode only.", "color": "red" }
+          }
+        },
+        {
+          "kind": "toggle",
+          "slot": 10,
+          "toggle": {
+            "score": "full_fly",
+            "off_item": "minecraft:feather",
+            "on_item": "minecraft:elytra",
+            "off_name": { "text": "Slow Falling: OFF", "color": "red" },
+            "on_name": { "text": "Slow Falling: ON", "color": "green" },
+            "off_lore": [{ "text": "toggle widget", "color": "dark_gray", "italic": false }],
+            "on_lore": [{ "text": "toggle widget (active)", "color": "dark_gray", "italic": false }],
+            "on_commands": ["effect give @s slow_falling 1000000 0 true"],
+            "off_commands": ["effect clear @s slow_falling"]
+          }
+        },
+        {
+          "kind": "counter",
+          "slot": 12,
+          "action_id": "warp_charges",
+          "item": "minecraft:ender_pearl",
+          "name": { "text": "Warp Charges", "color": "dark_aqua" },
+          "lore": [{ "text": "counter widget", "color": "dark_gray", "italic": false }],
+          "counter_score": "full_charges",
+          "counter_delta": 1,
+          "counter_min": 0,
+          "counter_max": 10,
+          "counter_wrap": true
+        },
+        {
+          "kind": "progress",
+          "slot": 13,
+          "progress_score": "full_quest",
+          "progress_max": 20,
+          "progress_width": 3,
+          "progress_full_item": "minecraft:lime_stained_glass_pane",
+          "progress_empty_item": "minecraft:gray_stained_glass_pane"
+        },
+        {
+          "kind": "random",
+          "slot": 16,
+          "action_id": "daily_crate",
+          "item": "minecraft:chest",
+          "name": { "text": "Daily Crate", "color": "aqua" },
+          "lore": [{ "text": "random widget + cooldown", "color": "dark_gray", "italic": false }],
+          "cooldown_ticks": 400,
+          "random": {
+            "rewards": [
+              {
+                "weight": 5,
+                "commands": ["give @s bread 3"],
+                "message": { "text": "You won 3 bread!", "color": "green" }
+              },
+              {
+                "weight": 2,
+                "commands": ["give @s golden_apple 1"],
+                "message": { "text": "Nice — a golden apple!", "color": "gold" }
+              },
+              {
+                "weight": 1,
+                "commands": ["give @s nether_star 1"],
+                "message": { "text": "JACKPOT: Nether Star!", "color": "light_purple", "bold": true }
+              }
+            ]
+          }
+        },
+        {
+          "kind": "link",
+          "slot": 17,
+          "action_id": "website",
+          "item": "minecraft:paper",
+          "name": { "text": "Our Website", "color": "aqua" },
+          "lore": [{ "text": "link widget", "color": "dark_gray", "italic": false }],
+          "url": "https://example.com",
+          "link_text": { "text": "Open example.com", "color": "aqua" }
+        },
+        {
+          "kind": "radio",
+          "slot": 20,
+          "radio": {
+            "score": "full_mode",
+            "value": 0,
+            "off_item": "minecraft:gray_dye",
+            "on_item": "minecraft:lime_dye",
+            "off_name": { "text": "Mode: Easy", "color": "gray" },
+            "on_name": { "text": "Mode: Easy (selected)", "color": "green" },
+            "off_lore": [{ "text": "radio widget (group: full_mode)", "color": "dark_gray", "italic": false }],
+            "on_commands": ["say Easy mode selected"]
+          }
+        },
+        {
+          "kind": "radio",
+          "slot": 21,
+          "radio": {
+            "score": "full_mode",
+            "value": 1,
+            "off_item": "minecraft:gray_dye",
+            "on_item": "minecraft:yellow_dye",
+            "off_name": { "text": "Mode: Normal", "color": "gray" },
+            "on_name": { "text": "Mode: Normal (selected)", "color": "yellow" },
+            "on_commands": ["say Normal mode selected"]
+          }
+        },
+        {
+          "kind": "radio",
+          "slot": 22,
+          "radio": {
+            "score": "full_mode",
+            "value": 2,
+            "off_item": "minecraft:gray_dye",
+            "on_item": "minecraft:red_dye",
+            "off_name": { "text": "Mode: Hard", "color": "gray" },
+            "on_name": { "text": "Mode: Hard (selected)", "color": "red" },
+            "on_commands": ["say Hard mode selected"]
+          }
+        },
+        {
+          "kind": "tab",
+          "slot": 24,
+          "action_id": "tab_shop_from_home",
+          "target_page": 1,
+          "name": { "text": "Kits & Shop", "color": "white" },
+          "tab": {
+            "off_item": "minecraft:gray_stained_glass_pane",
+            "on_item": "minecraft:lime_stained_glass_pane"
+          }
+        },
+        {
+          "kind": "nav",
+          "slot": 18,
+          "action_id": "to_kits",
+          "item": "minecraft:arrow",
+          "name": { "text": "Kits & Shop →", "color": "white" },
+          "target_page": 1,
+          "sound": "minecraft:ui.button.click"
+        },
+        {
+          "kind": "confirm",
+          "slot": 25,
+          "action_id": "reset_stats",
+          "item": "minecraft:tnt",
+          "name": { "text": "Reset my stats", "color": "red", "bold": true },
+          "lore": [{ "text": "confirm widget -> page 2", "color": "dark_gray", "italic": false }],
+          "confirm_page": 2
+        },
+        {
+          "kind": "close",
+          "slot": 26,
+          "action_id": "close_home",
+          "item": "minecraft:barrier",
+          "name": { "text": "Close", "color": "dark_red" }
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Kits & Shop",
+      "widgets": [
+        {
+          "kind": "label",
+          "slot": 0,
+          "item": "minecraft:compass",
+          "name": { "text": "Kits & Shop", "color": "gold", "bold": true }
+        },
+        {
+          "kind": "button",
+          "slot": 1,
+          "action_id": "first_steps",
+          "item": "minecraft:wooden_pickaxe",
+          "name": { "text": "Starter Kit", "color": "green" },
+          "lore": [{ "text": "has_advancement condition", "color": "dark_gray", "italic": false }],
+          "commands": ["give @s stone_pickaxe 1", "give @s torch 16"],
+          "condition": {
+            "type": "has_advancement",
+            "advancement": "minecraft:story/mine_stone",
+            "fail_message": { "text": "Mine stone first!", "color": "red" }
+          }
+        },
+        {
+          "kind": "button",
+          "slot": 2,
+          "action_id": "free_apple",
+          "item": "minecraft:golden_apple",
+          "name": { "text": "Free Apple Top-up", "color": "yellow" },
+          "lore": [{ "text": "item_count_lt condition", "color": "dark_gray", "italic": false }],
+          "commands": ["give @s golden_apple 1"],
+          "condition": {
+            "type": "item_count_lt",
+            "item": "minecraft:golden_apple",
+            "max_count": 3,
+            "fail_message": { "text": "You already carry 3+ golden apples.", "color": "red" }
+          }
+        },
+        {
+          "kind": "button",
+          "slot": 3,
+          "action_id": "claim_reward",
+          "item": "minecraft:emerald",
+          "name": { "text": "Claim Reward (100 pts)", "color": "green" },
+          "lore": [{ "text": "score condition + score cost", "color": "dark_gray", "italic": false }],
+          "commands": ["give @s diamond 5"],
+          "condition": {
+            "type": "score",
+            "score": "srv_points",
+            "matches": "100..",
+            "fail_message": { "text": "You need 100 points.", "color": "red" }
+          },
+          "cost": {
+            "score": "srv_points",
+            "amount": 100,
+            "fail_message": { "text": "Could not pay 100 points.", "color": "red" }
+          },
+          "success_message": { "text": "Reward claimed: 5 diamonds.", "color": "green" }
+        },
+        {
+          "kind": "cycle",
+          "slot": 5,
+          "cycle": {
+            "score": "full_time",
+            "wrap": true,
+            "options": [
+              {
+                "item": "minecraft:clock",
+                "name": { "text": "Set Time: Day", "color": "yellow" },
+                "commands": ["time set day"]
+              },
+              {
+                "item": "minecraft:clock",
+                "name": { "text": "Set Time: Night", "color": "dark_purple" },
+                "commands": ["time set night"]
+              },
+              {
+                "item": "minecraft:clock",
+                "name": { "text": "Set Time: Noon", "color": "gold", "enchanted": true },
+                "commands": ["time set noon"]
+              }
+            ]
+          }
+        },
+        {
+          "kind": "toggle",
+          "slot": 6,
+          "toggle": {
+            "score": "full_particles",
+            "off_item": "minecraft:gunpowder",
+            "on_item": "minecraft:firework_rocket",
+            "off_name": { "text": "Particles: OFF", "color": "red" },
+            "on_name": { "text": "Particles: ON", "color": "green" },
+            "on_lore": [{ "text": "tick_while_on demo", "color": "dark_gray", "italic": false }],
+            "tick_while_on": ["particle minecraft:end_rod ~ ~1 ~ 0.3 0.3 0.3 0.01 1"]
+          }
+        },
+        {
+          "kind": "separator",
+          "slot": 8,
+          "item": "minecraft:yellow_stained_glass_pane",
+          "name": { "text": " ", "color": "gray" }
+        },
+        {
+          "kind": "progress",
+          "slot": 10,
+          "progress_score": "full_season",
+          "progress_max": 100,
+          "progress_width": 4,
+          "progress_full_item": "minecraft:orange_stained_glass_pane",
+          "progress_empty_item": "minecraft:gray_stained_glass_pane"
+        },
+        {
+          "kind": "tab",
+          "slot": 24,
+          "action_id": "tab_home_from_shop",
+          "target_page": 0,
+          "name": { "text": "Home", "color": "white" },
+          "tab": {
+            "off_item": "minecraft:gray_stained_glass_pane",
+            "on_item": "minecraft:lime_stained_glass_pane"
+          }
+        },
+        {
+          "kind": "tab",
+          "slot": 25,
+          "action_id": "tab_shop_from_shop",
+          "target_page": 1,
+          "name": { "text": "Kits & Shop", "color": "white" },
+          "tab": {
+            "off_item": "minecraft:gray_stained_glass_pane",
+            "on_item": "minecraft:lime_stained_glass_pane"
+          }
+        },
+        {
+          "kind": "nav",
+          "slot": 18,
+          "action_id": "to_home",
+          "item": "minecraft:arrow",
+          "name": { "text": "← Home", "color": "white" },
+          "target_page": 0
+        },
+        {
+          "kind": "close",
+          "slot": 26,
+          "action_id": "close_kits",
+          "item": "minecraft:barrier",
+          "name": { "text": "Close", "color": "dark_red" }
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Danger Zone",
+      "widgets": [
+        {
+          "kind": "label",
+          "slot": 2,
+          "item": "minecraft:red_stained_glass_pane",
+          "name": { "text": "This cannot be undone!", "color": "red", "bold": true }
+        },
+        {
+          "kind": "button",
+          "slot": 11,
+          "action_id": "reset_yes",
+          "item": "minecraft:lime_concrete",
+          "name": { "text": "YES, reset everything", "color": "dark_green" },
+          "commands": [
+            "scoreboard players reset @s full_quest",
+            "scoreboard players reset @s full_charges",
+            "scoreboard players reset @s full_season",
+            "tellraw @s [{\"text\":\"Stats were reset.\",\"color\":\"red\"}]"
+          ],
+          "functions": ["vorta:custom/after_reset"],
+          "sound": "minecraft:entity.wither.death"
+        },
+        {
+          "kind": "nav",
+          "slot": 15,
+          "action_id": "reset_no",
+          "item": "minecraft:red_concrete",
+          "name": { "text": "NO, take me back", "color": "dark_red" },
+          "target_page": 0
+        },
+        {
+          "kind": "close",
+          "slot": 26,
+          "action_id": "close_danger",
+          "item": "minecraft:barrier",
+          "name": { "text": "Close", "color": "dark_red" }
+        }
+      ]
+    }
+  ]
+}

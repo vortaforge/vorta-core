@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "macroengine_util",
+  "ingredients": [
+    "minecraft:name_tag",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "minecraft:name_tag",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "macroengine": {
+          "input": true,
+          "inputItem": "name_tag"
+        }
+      },
+      "minecraft:item_name": {
+        "text": "Input Tag"
+      },
+      "minecraft:enchantment_glint_override": true
+    }
+  }
+}

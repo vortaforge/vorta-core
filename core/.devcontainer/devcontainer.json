@@ -1,0 +1,59 @@
+{
+  "name": "vortaforge core",
+  // Ubuntu 24.04 LTS ("noble"). Previously this used `base:resolute`
+  // (26.04, still the development series), which moves under you.
+  // Do not float to a development-series tag again.
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21",
+      "installGradle": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Runs once, after the container is created. Deliberately cheap and quiet:
+  // a heavyweight postCreateCommand is what makes a Codespace feel "stuck".
+  // Everything here is optional - the repo works without it.
+  "postCreateCommand": "python3 --version && node --version && java -version && bash -c 'set -e; chmod +x .githooks/* 2>/dev/null || true; git config core.hooksPath .githooks'",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Datapack tooling was removed: the datapack programme is retired
+        // (archived/archive.json) and `SPGoding.datapack-helper-plus` no
+        // longer exists in the marketplace - listing a dead extension id is
+        // what made container creation slow down and fail with an opaque
+        // error. Do not add datapack extensions back here.
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "ms-python.python",
+        "timonwong.shellcheck"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.exclude": {
+          "**/.gradle": true,
+          "**/__pycache__": true
+        }
+      }
+    }
+  },
+
+  // Gradle 9 needs JDK 17+; the java:21 feature provides it. The wrapper is
+  // used as-is, so no global Gradle is installed.
+  "remoteEnv": {
+    "JAVA_HOME": "/usr/local/sdkman/candidates/java/current"
+  },
+
+  // Root avoids the permission surprises of a bind-mounted workspace on
+  // Codespaces; the repo's tooling never assumes a specific user.
+  "remoteUser": "root",
+
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb",
+    "storage": "32gb"
+  }
+}

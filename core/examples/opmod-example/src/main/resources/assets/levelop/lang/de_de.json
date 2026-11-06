@@ -1,0 +1,4 @@
+{
+  "commands.op.message": "Operatorstufe auf %s gesetzt.",
+  "commands.op.failed": "Operatorstufe konnte nicht gesetzt werden."
+}

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API reference — VortaForge Docs</title>
+<meta name="description" content="VortaForge API reference: mod commands, configuration schemas, settings file format and datapack interop contract.">
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfd; --fg:#16181d; --muted:#5b6270; --line:#e2e5ec; --card:#fff;
+          --accent:#2563eb; --code:#f3f4f7; --warn:#b45309; --warnbg:#fff7ed; --warnline:#fdba74; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1014; --fg:#e8eaf0; --muted:#9aa3b2; --line:#252a33; --card:#151920;
+            --accent:#7ab7ff; --code:#1b2028; --warn:#fbbf24; --warnbg:#241a08; --warnline:#7c4a03; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; padding:34px 20px 80px; }
+  h1 { font-size:2rem; margin:0 0 8px; letter-spacing:-0.02em; }
+  h2 { font-size:1.32rem; margin:42px 0 12px; padding-top:20px; border-top:1px solid var(--line); letter-spacing:-0.01em; }
+  h3 { font-size:1.04rem; margin:26px 0 8px; }
+  .sub { color:var(--muted); margin:0 0 6px; font-size:15px; }
+  a { color:var(--accent); }
+  code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:var(--code); padding:2px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+        overflow-x:auto; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  td code { white-space:nowrap; }
+  .note { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent);
+          border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox { background:var(--warnbg); border:1px solid var(--warnline); border-left:4px solid var(--warnline);
+             border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox strong { color:var(--warn); }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>API reference</h1>
+  <p class="sub">The public surfaces you can build against: mod commands, the settings
+     file format, and the datapack interop contract.</p>
+
+  <div class="note">
+    <strong>Scope.</strong> Only the two live mods have a supported API surface.
+    Archived datapacks are documented for reference and carry no compatibility
+    promise &mdash; see <a href="warnings.html">pack warnings</a>.
+  </div>
+
+  <h2 id="afk">afk-manager</h2>
+  <p>Marks players AFK after a period of no meaningful movement and can optionally
+     disconnect them after a longer period.</p>
+
+  <h3>Command</h3>
+  <table>
+    <thead><tr><th>Command</th><th>Permission</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>/afk</code></td><td>None (any player)</td><td>Declares the calling player AFK immediately and prints the current status.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Configuration</h3>
+  <p>Stored as JSON in the mod's <code>SettingsFile</code>. Every value is clamped by
+     <code>AfkSettings.sanitized()</code> before use, so an out-of-range number in the
+     file is corrected rather than crashing the server.</p>
+
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Range / notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>afkAfterSeconds</code></td><td>int</td><td><code>300</code></td><td>10 &ndash; 86&nbsp;400. Idle time before a player is marked AFK.</td></tr>
+      <tr><td><code>kickAfterSeconds</code></td><td>int</td><td><code>0</code></td><td>0 &ndash; 604&nbsp;800. <code>0</code> disables kicking entirely.</td></tr>
+      <tr><td><code>announce</code></td><td>bool</td><td><code>true</code></td><td>Broadcast AFK state changes in chat.</td></tr>
+      <tr><td><code>exemptOperatorsFromKick</code></td><td>bool</td><td><code>true</code></td><td>Operators are marked AFK but never disconnected.</td></tr>
+      <tr><td><code>kickMessage</code></td><td>string</td><td><code>"Kicked for being AFK."</code></td><td>Shown on the disconnect screen.</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code>{
+  "afkAfterSeconds": 300,
+  "kickAfterSeconds": 0,
+  "announce": true,
+  "exemptOperatorsFromKick": true,
+  "kickMessage": "Kicked for being AFK."
+}</code></pre>
+
+  <p>The idle decision is made from sampled motion (<code>MotionSample</code> /
+     <code>IdleTracker</code>), not from a raw timer, so a player holding a movement
+     key against a wall does not stay "active" forever.</p>
+
+  <h2 id="join-throttle">join-throttle</h2>
+  <p>Rate-limits connection attempts per source address. Enforced in
+     <code>PlayerManagerMixin</code>, so it applies before a full join completes.</p>
+
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Range / notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>maxJoins</code></td><td>int</td><td><code>5</code></td><td>1 &ndash; 1000. Attempts allowed per window.</td></tr>
+      <tr><td><code>windowSeconds</code></td><td>int</td><td><code>30</code></td><td>1 &ndash; 3600. Length of the sliding window.</td></tr>
+      <tr><td><code>exemptAddresses</code></td><td>list&lt;string&gt;</td><td><code>[]</code></td><td>Keys are derived by <code>AddressKeys</code>; list the address form it produces.</td></tr>
+      <tr><td><code>denyMessage</code></td><td>string</td><td><code>"Too many connection attempts..."</code></td><td>Shown on the disconnect screen.</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code>{
+  "maxJoins": 5,
+  "windowSeconds": 30,
+  "exemptAddresses": [],
+  "denyMessage": "Too many connection attempts. Please wait a moment and try again."
+}</code></pre>
+
+  <h3>Behaviour worth knowing</h3>
+  <ul>
+    <li>The limiter is keyed on the address as produced by <code>AddressKeys</code>,
+        which normalises the form used as the key. Two spellings of the same address
+        must not become two buckets &mdash; that would double an attacker's budget.</li>
+    <li>Exemptions are exact matches, not prefixes. Exempting
+        <code>10.0.0.1</code> does not exempt <code>10.0.0.10</code>.</li>
+    <li>Values are clamped by <code>ThrottleSettings.sanitized()</code>; a negative
+        window becomes the minimum rather than an unbounded window.</li>
+  </ul>
+
+  <h2 id="interop">Datapack interop contract</h2>
+  <p>Archived packs that expose state use scoreboard objectives as the contract.
+     The stable, documented pattern is the gate query:</p>
+
+  <pre><code># Query: "is this pack currently usable?"
+execute if function macroengine:gate/is_open run function mypack:do_the_thing</code></pre>
+
+  <table>
+    <thead><tr><th>Objective</th><th>Holder</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>vortaforge.gate</code></td><td><code>#macroengine.open</code></td><td><code>1</code> when the pack is open and usable, <code>0</code> otherwise.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warnbox">
+    <strong>Archived &mdash; no compatibility promise.</strong>
+    This contract reflects the code as archived. It is not maintained and may not
+    behave as described on current Minecraft versions. Do not build a live dependency
+    on an archived pack; see <a href="warnings.html#you-should">what running an
+    archived pack means</a>.
+  </div>
+
+  <h2 id="text">Text components and <code>click_event</code></h2>
+  <p>Interactive chat text uses text components. The field names changed in
+     Minecraft 1.21.5 and the two forms are not interchangeable:</p>
+
+  <table>
+    <thead><tr><th></th><th>Before 1.21.5</th><th>1.21.5 and newer</th></tr></thead>
+    <tbody>
+      <tr><td>Field</td><td><code>clickEvent</code></td><td><code>click_event</code></td></tr>
+      <tr><td><code>open_url</code></td><td><code>{"action":"open_url","value":"…"}</code></td><td><code>{"action":"open_url","url":"…"}</code></td></tr>
+      <tr><td><code>run_command</code></td><td><code>{"action":"run_command","value":"/…"}</code></td><td><code>{"action":"run_command","command":"/…"}</code></td></tr>
+      <tr><td><code>change_page</code></td><td><code>{"action":"change_page","value":"1"}</code></td><td><code>{"action":"change_page","page":1}</code></td></tr>
+      <tr><td><code>show_text</code></td><td><code>text</code></td><td><code>value</code> (renamed in 25w03a)</td></tr>
+      <tr><td>Hover field</td><td><code>hoverEvent</code></td><td><code>hover_event</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>Two further rules matter:</p>
+  <ul>
+    <li>From 1.21.5, <code>open_url</code> only parses a real URI beginning with
+        <code>https://</code> or <code>http://</code>. A bare hostname now fails
+        instead of silently doing nothing.</li>
+    <li>1.21.6 added a <code>minecraft:custom</code> click action for servers that
+        want to handle clicks themselves.</li>
+  </ul>
+
+  <p><code>pack.mcmeta</code> does <em>not</em> accept text components. It takes only
+     <code>description</code>, <code>pack_format</code>, <code>supported_formats</code>,
+     <code>min_format</code> and <code>max_format</code>. A clickable in-game warning
+     therefore has to be issued at load time by a function, not written into metadata.</p>
+
+  <footer>
+    VortaForge &middot; Unlicense &middot;
+    <a href="../index.html">docs home</a> &middot;
+    <a href="warnings.html">pack warnings</a> &middot;
+    <a href="versions.html">version matrix</a>
+  </footer>
+</div>
+</body>
+</html>

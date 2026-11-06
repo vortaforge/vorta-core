@@ -1,0 +1,38 @@
+{
+  "namespace": "myserver",
+  "menu_id": "starter",
+  "display_name": "Starter Menu",
+  "pages": [
+    {
+      "name": "Main",
+      "widgets": [
+        {
+          "kind": "button",
+          "slot": 11,
+          "item": "minecraft:grass_block",
+          "name": { "text": "Say Hello", "color": "green" },
+          "commands": ["tellraw @a [{\"text\":\"Hello from the GUI!\",\"color\":\"aqua\"}]"],
+          "success_message": { "text": "Done!", "color": "green" }
+        },
+        {
+          "kind": "button",
+          "slot": 15,
+          "item": "minecraft:clock",
+          "name": { "text": "What time is it?", "color": "yellow" },
+          "commands": ["time query daytime"],
+          "condition": {
+            "type": "gamemode",
+            "gamemode": "survival",
+            "fail_message": { "text": "Survival mode only.", "color": "red" }
+          }
+        },
+        {
+          "kind": "close",
+          "slot": 26,
+          "item": "minecraft:barrier",
+          "name": { "text": "Close", "color": "dark_red" }
+        }
+      ]
+    }
+  ]
+}

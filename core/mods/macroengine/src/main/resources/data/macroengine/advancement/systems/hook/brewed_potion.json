@@ -1,0 +1,11 @@
+{
+  "criteria": {
+    "brewed_potion": {
+      "trigger": "minecraft:brewed_potion"
+    }
+  },
+  "rewards": {
+    "function": "macroengine:core/internal/systems/hook/on_brewed_potion"
+  },
+  "parent": "macroengine:hidden/root"
+}

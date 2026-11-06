@@ -1,0 +1,18 @@
+{
+  "pack": {
+    "description": "macroEngine | 26.3 — resource pack (REQUIRED: i18n, sounds, trim assets)",
+    "min_format": [
+      97,
+      1
+    ],
+    "max_format": [
+      97,
+      1
+    ]
+  },
+  "features": {
+    "enabled": [
+      "minecraft:vanilla"
+    ]
+  }
+}

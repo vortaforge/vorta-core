@@ -23,11 +23,26 @@ index.json            snapshot: every repository that exists right now
 events.log            ledger: one JSON line per event, append-only
 scripts/discover.py   ask GitHub what exists
 scripts/sync.py       compare index, ledger and GitHub; emit the difference
+scripts/mirror.py     copy every repository's default branch into <repo name>/
 scripts/record_event.py  append one event
 scripts/receive_event.py webhook receiver (HMAC-verified) + dispatch adapter
 tests/test_sync.py    the decision logic, tested without touching GitHub
+tests/test_mirror.py  the mirror's file-ownership rules, tested on local repos
 .github/workflows/    scheduled sweep, event receiver, health check
+
+core/                 mirror of vortaforge/core
+docs/                 mirror of vortaforge/docs        (nests to docs/docs/)
+.github/              mirror of vortaforge/.github     (workflows nest, do not run)
+macroengine-modules/  mirror of vortaforge/macroengine-modules
+vorta-core/           mirror of this repository, one sync behind
 ```
+
+A mirrored tree is a **snapshot**, not a checkout: no `.git`, not editable, and
+overwritten on the next run. `.mirror.json` at the top of each records the commit,
+the branch and the time it was taken. Edit in the source repository.
+
+`index.json` answers *"what is there?"*. `events.log` answers *"what happened, and
+when?"*, and the mirrored trees answer *"what is in them?"*. None replaces another.
 
 `index.json` answers *"what is there?"*. `events.log` answers *"what happened, and
 when?"*. Neither replaces the other: the index is small and current, the ledger is
@@ -62,11 +77,17 @@ second is much rarer than the first.
 
 ```bash
 gh auth login                       # needs repo + read:org
-python3 tests/test_sync.py          # 12 tests, no network
+python3 tests/test_sync.py          # 13 tests, no network
+python3 tests/test_mirror.py        # 5 tests, no network
 python3 scripts/discover.py --org vortaforge        # just look
 python3 scripts/sync.py --org vortaforge            # dry run
 python3 scripts/sync.py --org vortaforge --apply    # write index.json + events.log
 python3 scripts/sync.py --org vortaforge --check    # exit 1 on drift
+
+# The mirror needs git credentials, because it clones rather than calling the API:
+gh auth setup-git
+python3 scripts/mirror.py --org vortaforge           # dry run: what is stale
+python3 scripts/mirror.py --org vortaforge --apply   # write the trees
 ```
 
 The webhook receiver, for a small always-on host:

@@ -1,0 +1,4 @@
+{
+  "commands.op.message": "オペレーター権限レベルを %s に設定しました。",
+  "commands.op.failed": "オペレーター権限レベルを設定できませんでした。"
+}

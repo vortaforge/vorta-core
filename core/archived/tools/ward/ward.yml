@@ -1,0 +1,128 @@
+name: Ward (datapack tests on an isolated test server)
+
+# =============================================================================
+# WARNING - THIS WORKFLOW STARTS A MINECRAFT SERVER.
+#
+# This is the ONLY place in the repository that does. Everywhere else the rule
+# in docs/MAINTAINER_GUIDE.md stands: no tests on or against a Minecraft server.
+#
+# The server is a throw-away Fabric server managed by mcward 1.4.0 (Ward):
+#   * bound to 127.0.0.1 only, whitelist on + enforced + empty, online-mode on,
+#     status/query/RCON off  (scripts/ward_guard.py seeds these BEFORE start),
+#   * proven loopback-only by scripts/ward_guard.py before any test runs and
+#     again after the tests; the job fails if a single socket is reachable,
+#   * inbound TCP 25565 dropped on non-loopback interfaces when sudo/iptables
+#     is available,
+#   * stopped and deleted afterwards, even on failure (trap in
+#     scripts/ward_ci.sh, plus the "Verify cleanup" step below).
+#
+# It runs on a GitHub-hosted runner only. It has no secrets, no deployment
+# environment and a read-only token. Never point it at a real world, a
+# production host or a self-hosted runner.
+#
+# NETWORK DESTINATIONS this job needs besides GitHub and PyPI (documented
+# necessity: mcward downloads a Fabric server, mods and a JRE; Fabric's server
+# launcher then fetches the vanilla server and libraries from Mojang):
+#   api.adoptium.net, github.com/adoptium (JRE), meta.fabricmc.net,
+#   maven.fabricmc.net, api.modrinth.com, cdn.modrinth.com,
+#   raw.githubusercontent.com (pack-format registry), piston-meta.mojang.com,
+#   piston-data.mojang.com, libraries.minecraft.net.
+# GitHub-hosted runners have unrestricted egress; there is no network boundary
+# here that this file could enforce.
+#
+# The Minecraft EULA is NOT accepted by this workflow. If the server refuses to
+# start without it, a maintainer must decide to set WARD_ACCEPT_MINECRAFT_EULA
+# to "true" below after reading https://aka.ms/MinecraftEULA.
+#
+# This check fails when no pack contains Ward tests
+# (data/<namespace>/test/**.mcfunction); a required check must test something.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - "packs/**"
+      - "scripts/ward_ci.sh"
+      - "scripts/ward_guard.py"
+      - ".github/workflows/ward.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packs/**"
+      - "scripts/ward_ci.sh"
+      - "scripts/ward_guard.py"
+      - ".github/workflows/ward.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ward:
+    name: Ward tests (isolated server, CI only)
+    runs-on: ubuntu-latest # GitHub-hosted only; never self-hosted
+    timeout-minutes: 25
+
+    env:
+      # Minecraft version(s) to test on. The prior project guidance named 26.3;
+      # verify pack targets and that Ward publishes a build for this version.
+      WARD_MC_VERSION: "26.3"
+      MCWARD_VERSION: "1.4.0"
+      # WARD_ACCEPT_MINECRAFT_EULA: "true"   # maintainer decision, see header
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Warning
+        shell: bash
+        run: |
+          {
+            echo "## ⚠️ This job starts a Minecraft test server"
+            echo ""
+            echo "Isolated, loopback-only, whitelist enforced, deleted afterwards."
+            echo "It is the only place in this repository that starts a server."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Minecraft test server::This job starts a loopback-only, throw-away Minecraft server (see .github/workflows/ward.yml)."
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # mcward 1.4.0 requires Python >= 3.14.
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.14"
+
+      - name: Install mcward (pinned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install \
+            "mcward==${MCWARD_VERSION}" \
+            "mcward-cli==${MCWARD_VERSION}" \
+            "mcward-core==${MCWARD_VERSION}"
+          mcward --help >/dev/null
+
+      - name: Run Ward tests on the isolated test server
+        shell: bash
+        run: bash scripts/ward_ci.sh
+
+      # Belt and braces: the script already cleans up in a trap, this step
+      # fails the job if anything of the server survived.
+      - name: Verify cleanup
+        if: always()
+        shell: bash
+        run: |
+          set -u
+          pkill -f -- '-Dward.daemon=' 2>/dev/null || true
+          sleep 1
+          if pgrep -f -- '-Dward.daemon=' >/dev/null 2>&1; then
+            echo "::error title=Ward cleanup::a Ward server process is still running"
+            exit 1
+          fi
+          echo "✔ no Ward server process left" >> "$GITHUB_STEP_SUMMARY"

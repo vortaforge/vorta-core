@@ -1,0 +1,35 @@
+// build.gradle for packs/macroEngine-Datapack-v26.3
+// Local zip packaging only; publishing to GitHub is handled separately.
+
+plugins {
+    id 'base'
+}
+
+def packDir = projectDir
+def distDir = layout.buildDirectory.dir('dist')
+
+tasks.register('zipMacroEnginePack', Zip) {
+    group = 'build'
+    description = 'Zips this datapack folder (data/, pack.mcmeta, pack.png, README.md, LICENSE, THIRD_PARTY_LICENSES.md) into a distributable archive.'
+    archiveFileName.set('macroEngine-Datapack-v26.3.zip')
+    destinationDirectory.set(distDir)
+
+    doFirst {
+        ['LICENSE', 'THIRD_PARTY_LICENSES.md'].each { name ->
+            if (!new File(packDir, name).isFile()) {
+                throw new GradleException("Cannot package macroEngine without ${name}.")
+            }
+        }
+    }
+
+    from(packDir) {
+        include 'data/**'
+        // Ward tests stay in source and must not ship as vanilla datapack files.
+        exclude 'data/*/test/**'
+        include 'pack.mcmeta'
+        include 'pack.png'
+        include 'README.md'
+        include 'LICENSE'
+        include 'THIRD_PARTY_LICENSES.md'
+    }
+}

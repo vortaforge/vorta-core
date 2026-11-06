@@ -1,0 +1,73 @@
+plugins {
+	// Loom 1.15.5. Two claims that used to sit here were wrong and are now
+	// corrected rather than repeated:
+	//   * it is NOT "pinned to match mods/datapack-blocker" - that subproject
+	//     targets MC 1.21.1 (obfuscated, Yarn mappings) and shares only the
+	//     number, not the setup;
+	//   * 1.15.5 is NOT the minimum Loom with unobfuscated-jar support - that
+	//     landed in Loom 1.14, which also added the dedicated
+	//     `net.fabricmc.fabric-loom` plugin id used for non-remapping builds.
+	// FabricMC recommends Loom 1.17 + Gradle 9.6+ for MC 26.3; 1.18 is current.
+	// The pin itself is changed in the Gradle-consistency work, not here.
+	id 'fabric-loom' version '1.15.5'
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// Add repositories to retrieve artifacts from in here.
+	// You should only use this when depending on other mods because
+	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
+	// for more information about repositories.
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+
+	// MC 26.3 ships unobfuscated (final names, no Yarn layer needed).
+	// fabric.loom.disableObfuscation=true in gradle.properties tells Loom to
+	// skip mapping resolution entirely — there is no `mappings "..."` line.
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API. NOTE: with disableObfuscation=true, Loom's
+	// RemapConfigurations.setupForSourceSet returns early and never creates
+	// the mod* configurations — so this must be plain `implementation`,
+	// not `modImplementation`, or dependency resolution will fail/no-op.
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	// Java 25 is required by Minecraft 26.3
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+// NOTE: no `jar { from("LICENSE") {...} }` block here -- add one back only
+// if you add a LICENSE file to this subproject; referencing a nonexistent
+// file here would fail the jar task.
+
+// processResources' fabric.mod.json version expansion, withSourcesJar(), and
+// the mavenJava publication are identical across mods/ - see
+// build-logic/shared-fabric-mod.gradle for what this pulls in and why it's
+// `apply from:` rather than a precompiled plugin. A projectDir-relative path
+// is used (not ${rootDir}) so this also resolves correctly if this mod is
+// ever built standalone via its own settings.gradle, where rootDir would
+// point here instead of at vortaforge/core's root. The shared script sets
+// `artifactId project.archivesBaseName` explicitly on the publication (see
+// its own comment) - maven-publish's plugin default for artifactId is
+// project.name, not archivesBaseName, so that line is still needed here; it
+// resolves to "opmod" (from `base { archivesName = ... }` above), not the
+// "opmod-example" directory name.
+apply from: "${projectDir}/../../build-logic/shared-fabric-mod.gradle"

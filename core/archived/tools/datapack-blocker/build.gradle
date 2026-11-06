@@ -1,0 +1,47 @@
+plugins {
+    id 'fabric-loom' version '1.15.5'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.12.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.slf4j:slf4j-api:2.0.16'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+// processResources' fabric.mod.json version expansion, withSourcesJar(), and
+// the mavenJava publication are identical across mods/ - see
+// build-logic/shared-fabric-mod.gradle for what this pulls in and why it's
+// `apply from:` rather than a precompiled plugin. A projectDir-relative path
+// is used (not ${rootDir}) so this also resolves correctly if this mod is
+// ever built standalone via its own settings.gradle, where rootDir would
+// point here instead of at vortaforge/core's root.
+apply from: "${projectDir}/../../build-logic/shared-fabric-mod.gradle"

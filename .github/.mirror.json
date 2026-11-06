@@ -1,0 +1,30 @@
+{
+  "files": 18,
+  "bytes": 139164,
+  "symlinksDropped": 0,
+  "paths": [
+    ".github/workflows/datapack-blocklist-sync.yml",
+    ".gitignore",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "CREDITS.md",
+    "LICENSE",
+    "README.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "TRANSFER.md",
+    "blocklist/README.md",
+    "blocklist/blocklist.json",
+    "generated/blocklist.json",
+    "patches/0001-feat-blocklist-organisation-wide-datapack-blocklist-.patch",
+    "patches/README.md",
+    "profile/README.md",
+    "scripts/blocklist_sync.py",
+    "tests/test_blocklist_sync.py"
+  ],
+  "repo": "vortaforge/.github",
+  "branch": "main",
+  "commit": "080cc786d8c2382dcfaaaab31d0294964b45a56b",
+  "syncedAt": "2026-11-06T18:20:48.331221Z",
+  "note": "Snapshot of the default branch. Read-only: do not edit here."
+}

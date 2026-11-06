@@ -1,0 +1,11 @@
+{
+  "criteria": {
+    "bred_animals": {
+      "trigger": "minecraft:bred_animals"
+    }
+  },
+  "rewards": {
+    "function": "macroengine:core/internal/systems/hook/on_bred_animals"
+  },
+  "parent": "macroengine:hidden/root"
+}

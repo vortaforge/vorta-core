@@ -1,0 +1,96 @@
+# Publishes the static documentation site to GitHub Pages.
+#
+# Deliberately plain: no build step, no framework, no npm. The site is hand-written
+# HTML with inline CSS so that a preview renderer with no network access still shows
+# it correctly, and so that nothing can silently break because a CDN moved. The only
+# thing this workflow does is assert the site is self-contained, then deploy it.
+name: Docs
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build docs site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Verify the site is self-contained and internally linked
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+
+          root = pathlib.Path(".")
+          pages = sorted(p for p in root.rglob("*.html"))
+          if not pages:
+              sys.exit("no HTML pages found")
+
+          problems = []
+
+          # 1. No external resources: the in-app preview has no network access, and a
+          #    CDN dependency is a silent single point of failure for a docs site.
+          for page in pages:
+              text = page.read_text(encoding="utf-8")
+              for m in re.finditer(r'(?:src|href)=["\'](https?://[^"\']+)["\']', text):
+                  url = m.group(1)
+                  # Plain links to other sites are fine; loading assets is not.
+                  if m.group(0).startswith("src="):
+                      problems.append(f"{page}: external asset {url}")
+              if "<script" in text and "src=" in text:
+                  problems.append(f"{page}: external script tag")
+
+          # 2. Every relative internal link must resolve to a real file.
+          for page in pages:
+              text = page.read_text(encoding="utf-8")
+              for m in re.finditer(r'href=["\']([^"\'#?]+)(?:[#?][^"\']*)?["\']', text):
+                  target = m.group(1)
+                  if target.startswith(("http://", "https://", "mailto:", "#")):
+                      continue
+                  resolved = (page.parent / target).resolve()
+                  if target.endswith("/"):
+                      resolved = resolved / "index.html"
+                  if not resolved.exists():
+                      problems.append(f"{page}: broken link -> {target}")
+
+          if problems:
+              print("site validation failed:", file=sys.stderr)
+              for p in problems:
+                  print("  " + p, file=sys.stderr)
+              sys.exit(1)
+
+          print(f"ok: {len(pages)} pages, self-contained, all internal links resolve")
+          PY
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: .
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

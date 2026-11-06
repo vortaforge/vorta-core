@@ -1,0 +1,133 @@
+# .github/workflows/upstream-canary.yml
+#
+# The input to this repository lives in another one.
+#
+# `packs/` is generated from vortaforge/core's archived macroEngine pack. That
+# means the split can break without a single commit landing here: someone edits a
+# function id, adds a namespace, or renames a folder upstream, and the next CI run
+# is the first anyone hears about it. If that happens on a quiet week, nothing is
+# broken and nobody notices; if it happens on a release day, it is an outage.
+#
+# So this runs daily whether or not this repository changed, and:
+#
+#   * fails if the split or the verification no longer passes against upstream;
+#   * fails if the *shape* of the split changed (pack count, file count, total
+#     functions) even when verification passes, because a silent shift in the
+#     layout - a module that quietly disappeared, ids that moved between packs -
+#     is the kind of drift a green verify does not catch.
+#
+# It never opens an issue or writes anything. It goes red, which is the signal that
+# cannot be lost in a notification backlog.
+
+name: Upstream canary
+
+on:
+  schedule:
+    # Daily at 06:11 UTC. Off the hour on purpose: scheduled runs queue behind
+    # everyone else's on-the-hour jobs and can start twenty minutes late.
+    - cron: "11 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REPO: vortaforge/core
+  SOURCE_PACK: archived/packs/macroEngine-Datapack-v26.3
+  JAVA_VERSION: "25"
+
+jobs:
+  canary:
+    name: Split against the current upstream pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Fetch the source pack
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_READ_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          dest="${RUNNER_TEMP}/source-pack"
+          rm -rf "$dest"
+          if ! git clone --quiet --filter=blob:none --sparse --depth=1 \
+                "https://x-access-token:${GH_TOKEN}@github.com/${SOURCE_REPO}.git" "$dest"; then
+            echo "::error title=Cannot fetch the source pack::set SOURCE_READ_TOKEN if ${SOURCE_REPO} is private."
+            exit 1
+          fi
+          git -C "$dest" sparse-checkout set "$SOURCE_PACK"
+          if [ ! -f "$dest/$SOURCE_PACK/pack.mcmeta" ]; then
+            echo "::error title=Source pack missing::${SOURCE_PACK} was moved or renamed upstream."
+            echo "::error::Update SOURCE_PACK in ci.yml, release.yml and upstream-canary.yml."
+            exit 1
+          fi
+          # Recorded so the failure message names the exact upstream commit the
+          # split was tested against - a canary that says "upstream changed" without
+          # saying which commit is a canary nobody can act on.
+          echo "UPSTREAM_SHA=$(git -C "$dest" rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          echo "SOURCE_DIR=$dest/$SOURCE_PACK" >> "$GITHUB_ENV"
+          echo "upstream ${SOURCE_REPO} at $(git -C "$dest" rev-parse --short HEAD)"
+
+      - name: Set up JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+        with:
+          validate-wrappers: true
+
+      - name: Split
+        run: python3 tools/split.py --source "$SOURCE_DIR" --out . --in-place
+
+      - name: Verify and build
+        run: |
+          set -euo pipefail
+          python3 tools/verify.py --pack packs --graph
+          ./gradlew --no-daemon --console=plain check dist
+
+      - name: Compare the split shape with what is committed
+        # `modules.json` is committed from the last reviewed split, so it doubles as
+        # the baseline. A pack losing half its files, a module vanishing, or ids
+        # landing in the wrong module all pass verification - the result is still a
+        # consistent layout - but they mean the splitter no longer understands the
+        # source. That is what this step is for.
+        run: python3 tools/check_shape.py
+
+      - name: Report
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "### Upstream canary"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Upstream | \`${SOURCE_REPO}\` @ \`${UPSTREAM_SHA:-unknown}\` |"
+            echo "| Pack | \`${SOURCE_PACK}\` |"
+            echo "| Result | \`${{ job.status }}\` |"
+            echo
+            if [ -f modules.json ]; then
+              python3 tools/summarize.py modules.json || true
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the split for inspection
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          # On a failure the generated tree is the evidence: it shows what the
+          # splitter produced from the upstream pack that broke it.
+          name: canary-split-${{ github.run_id }}
+          path: |
+            modules.json
+            packs/**/*.json
+          retention-days: 7
+          if-no-files-found: ignore

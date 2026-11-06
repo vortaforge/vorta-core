@@ -1,0 +1,28 @@
+{
+  "files": 16,
+  "bytes": 75737,
+  "symlinksDropped": 0,
+  "paths": [
+    ".github/workflows/health.yml",
+    ".github/workflows/receive.yml",
+    ".github/workflows/sync.yml",
+    ".gitignore",
+    "LICENSE",
+    "README.md",
+    "docs/DESIGN.md",
+    "docs/OPERATIONS.md",
+    "events.log",
+    "index.json",
+    "scripts/backfill.py",
+    "scripts/discover.py",
+    "scripts/receive_event.py",
+    "scripts/record_event.py",
+    "scripts/sync.py",
+    "tests/test_sync.py"
+  ],
+  "repo": "vortaforge/vorta-core",
+  "branch": "main",
+  "commit": "c63ef38d20609de3e3f1fce40af2e8ac10e1913b",
+  "syncedAt": "2026-11-06T18:20:48.331221Z",
+  "note": "Snapshot of the default branch. Read-only: do not edit here."
+}

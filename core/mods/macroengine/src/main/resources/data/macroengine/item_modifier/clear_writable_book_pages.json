@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:set_writable_book_pages",
+  "pages": [],
+  "mode": "replace_all"
+}

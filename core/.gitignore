@@ -1,0 +1,47 @@
+.idea/
+*.iml
+.vscode/
+.minecraft/
+local.properties
+/run/
+/logs/
+*.log
+.env
+*.env
+*.pem
+.gradle/
+build/
+out/
+*.tar.gz
+*.bak
+!packs/*/data/*/**/run
+!packs/*/data/*/**/build
+!mods/*/src/*/**/run
+!mods/*/src/*/**/build
+# Patch series: the archival change set lives in archived/patches/ and must be
+# committed, so the blanket ignore is narrowed to stray patches elsewhere.
+*.patch
+!archived/patches/**/*.patch
+!archived/patches-gh/**/*.patch
+
+# archived/build/ holds the datapack Gradle logic extracted from the root
+# build.gradle. The build/ rule above matches a directory named "build" at any
+# depth, which silently swallowed it; this re-includes it. Do not remove.
+!archived/build/
+!archived/build/**
+
+# Local toolchains and Python / Node tooling artifacts
+.toolchains/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+node_modules/
+/archived/tools/gui-generator/dist/
+
+# Gradle subproject state and output: mods/*/build/ and mods/*/.gradle/ are generated,
+# never committed. The rules above only excluded the repository-root ones.
+mods/*/build/
+mods/*/.gradle/
+mods/*/.loom/
+**/__pycache__/
