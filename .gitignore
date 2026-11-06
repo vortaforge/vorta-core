@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+# The ledger's directory is the repository root, so nothing else may land here by
+# accident and get committed as if it were a record.
+*.tmp
+.DS_Store
