@@ -75,8 +75,37 @@ python3 tools/split.py --source <macroEngine-26.3 pack> --out . --in-place
 build (they are its sub-projects), not an output of it. Putting them under `build/`
 made `clean` delete the thing it was about to build.
 
-The jars can be dropped straight into a world's `datapacks/` folder. **No module
-loads without core**, but core loads and runs on its own.
+### What is in a jar
+
+Every jar is a **Fabric mod**, not a bare data pack:
+
+```
+me_cb_module-1.0.0.jar
+├── fabric.mod.json                           mod manifest, id `macroengine-cb`
+├── com/vortaforge/macroengine/.../Entry.class  entry point the manifest names
+├── pack.mcmeta                               data pack manifest (format 121)
+└── data/me_cb_module/...                     the pack itself
+```
+
+Install it by dropping it into the world's or profile's `mods/` folder. Fabric
+reads the `data/` tree from inside the jar, which is the same layout the game uses
+for a `datapacks/` folder — so the same file also works there, with no mod loader
+at all.
+
+`fabric.mod.json` is generated twice, deliberately: `tools/split.py` writes one so
+a pack directory is a valid mod source on its own, and `renderFabricMeta` in
+`build.gradle` writes the one that ships, with the real version number. They are
+compared field by field; the only difference is `version`, which split writes as
+Fabric's `${file.jarVersion}` placeholder.
+
+Every module declares `macroengine-core` as a dependency. **No module loads
+without core**, but core loads and runs on its own — that is the whole point of
+the split.
+
+`gradlew dist` runs `tools/check_jars.py` afterwards and fails if any jar is not
+loadable: no manifest, a manifest naming an entry point class that is not in the
+jar, no `pack.mcmeta`, a duplicate mod id, or a module that forgot its core
+dependency.
 
 ## Modules
 

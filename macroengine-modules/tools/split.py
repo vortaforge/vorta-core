@@ -678,6 +678,7 @@ class Split:
         self._write_published()
         self._write_forwarders()
         self._write_pack_metas()
+        self._write_fabric_meta()
         self._write_manifests()
 
     # ------------------------------------------------------------------
@@ -896,6 +897,81 @@ class Split:
             (pack_dir / "pack.mcmeta").write_text(json.dumps(meta, indent=2) + "\n",
                                                   encoding="utf-8")
 
+    # ------------------------------------------------------------------
+    # Fabric packaging.
+    #
+    # A jar that only holds pack.mcmeta + data/ is a *data pack* jar: the game
+    # loads it from a world's datapacks/ folder and mod loaders ignore it. The
+    # point of this project is Fabric-style composition - install the core mod and
+    # the modules you want - so each pack also gets a fabric.mod.json and becomes
+    # a real mod jar. The datapack layout stays at the same paths inside the jar,
+    # which is exactly where Fabric reads a mod's bundled data pack from.
+    #
+    # Two consequences that are easy to get wrong:
+    #
+    #   * Every mod jar needs its own entry point class, and that class must exist
+    #     as a compiled .class inside the jar. A fabric.mod.json naming a class
+    #     that is not there makes the loader refuse to start the whole game.
+    #   * A mod id must be unique and must match the data namespace, or the game
+    #     loads two copies of the same pack and the merged hook tags double up.
+    # ------------------------------------------------------------------
+    @staticmethod
+    def fabric_mod_id(pack: str) -> str:
+        """`me_cb_module` -> `macroengine-cb`.
+
+        A Fabric mod id must match `[a-z0-9_-]+` and be unique across the whole
+        installation. The pack names satisfy that already, but they read badly in
+        a mod list and leak the internal `me_`/`_module` wrapper.
+        """
+        if pack == "me_core_module":
+            return "macroengine-core"
+        return "macroengine-" + pack[len("me_"):-len("_module")].replace("_", "-")
+
+    def _fabric_meta(self, name: str) -> str:
+        """A minimal, valid fabric.mod.json.
+
+        `gradlew` regenerates this file from build.gradle before packaging, and
+        that copy is the one shipped. This one exists because the pack directory
+        is also usable as a source tree - someone adding a module by hand, or
+        reading `packs/me_cb_module/` to see what a mod is made of - and a
+        directory that is a mod source without its manifest is a trap.
+
+        The two agree on every field that matters (id, entry point, core
+        dependency). `version` is the one deliberate difference: Gradle writes the
+        real number, this writes `${file.jarVersion}`, which is Fabric's own
+        placeholder for "read it from the jar manifest". A hard-coded version here
+        would drift the moment `modulesVersion` moved.
+        """
+        core = name == "me_core_module"
+        mod_id = self.fabric_mod_id(name)
+        depends = {"fabricloader": ">=0.16.0", "minecraft": ">=1.21.9"}
+        if not core:
+            depends["macroengine-core"] = "*"
+        meta = {
+            "schemaVersion": 1,
+            "id": mod_id,
+            "version": "${file.jarVersion}",
+            "name": f"macroEngine {'core' if core else name[len('me_'):-len('_module')]}",
+            "description": ("macroEngine core - engine internals, load and tick."
+                            if core else
+                            f"{name} - one module of the macroEngine engine; "
+                            f"requires macroengine-core."),
+            "authors": ["vortaforge"],
+            "license": "Unlicense",
+            "environment": "*",
+            "entrypoints": {
+                "main": [f"com.vortaforge.macroengine."
+                         f"{mod_id.replace('-', '_')}.MacroEngineEntry"],
+            },
+            "depends": depends,
+        }
+        return json.dumps(meta, indent=2) + "\n"
+
+    def _write_fabric_meta(self) -> None:
+        for pack_dir in sorted((self.out / "packs").iterdir()):
+            (pack_dir / "fabric.mod.json").write_text(
+                self._fabric_meta(pack_dir.name), encoding="utf-8")
+
     def _write_manifests(self) -> None:
         """Write build/modules.json - the machine-readable description of the split.
 
@@ -935,6 +1011,7 @@ class Split:
             modules.append({
                 "name": name,
                 "namespace": module_namespace(name),
+                "modId": self.fabric_mod_id(module_namespace(name)),
                 "pack": f"packs/{module_namespace(name)}",
                 "files": by_module[name],
                 "hooks": hooks_by_module.get(name, {}),
@@ -944,7 +1021,14 @@ class Split:
         manifest = {
             "schema": 2,
             "source": f"{OLD_NAMESPACE} data pack, format 121.0 / Minecraft 26.3",
-            "layout": "one core pack plus independently loadable module packs",
+            "layout": "one core mod plus independently installable module mods",
+            "packaging": {
+                "type": "fabric-mod",
+                "manifest": "fabric.mod.json",
+                "bundledDataPack": "pack.mcmeta + data/ at the jar root",
+                "coreModId": self.fabric_mod_id("me_core_module"),
+                "everyModuleDependsOn": self.fabric_mod_id("me_core_module"),
+            },
             "naming": "me_<module>_module:<path>, no api/ or systems/ segment",
             "requires": "every module requires me_core_module; core requires nothing",
             "hookSlots": {

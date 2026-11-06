@@ -1,7 +1,14 @@
 {
   "schema": 2,
   "source": "macroengine data pack, format 121.0 / Minecraft 26.3",
-  "layout": "one core pack plus independently loadable module packs",
+  "layout": "one core mod plus independently installable module mods",
+  "packaging": {
+    "type": "fabric-mod",
+    "manifest": "fabric.mod.json",
+    "bundledDataPack": "pack.mcmeta + data/ at the jar root",
+    "coreModId": "macroengine-core",
+    "everyModuleDependsOn": "macroengine-core"
+  },
   "naming": "me_<module>_module:<path>, no api/ or systems/ segment",
   "requires": "every module requires me_core_module; core requires nothing",
   "hookSlots": {
@@ -95,6 +102,7 @@
     {
       "name": "core",
       "namespace": "me_core_module",
+      "modId": "macroengine-core",
       "pack": "packs/me_core_module",
       "files": 1062,
       "hooks": {},
@@ -103,6 +111,7 @@
     {
       "name": "player",
       "namespace": "me_player_module",
+      "modId": "macroengine-player",
       "pack": "packs/me_player_module",
       "files": 58,
       "hooks": {
@@ -130,6 +139,7 @@
     {
       "name": "world",
       "namespace": "me_world_module",
+      "modId": "macroengine-world",
       "pack": "packs/me_world_module",
       "files": 27,
       "hooks": {},
@@ -138,6 +148,7 @@
     {
       "name": "tui",
       "namespace": "me_tui_module",
+      "modId": "macroengine-tui",
       "pack": "packs/me_tui_module",
       "files": 4,
       "hooks": {},
@@ -146,6 +157,7 @@
     {
       "name": "cmd",
       "namespace": "me_cmd_module",
+      "modId": "macroengine-cmd",
       "pack": "packs/me_cmd_module",
       "files": 123,
       "hooks": {
@@ -158,6 +170,7 @@
     {
       "name": "store",
       "namespace": "me_store_module",
+      "modId": "macroengine-store",
       "pack": "packs/me_store_module",
       "files": 32,
       "hooks": {},
@@ -166,6 +179,7 @@
     {
       "name": "wand",
       "namespace": "me_wand_module",
+      "modId": "macroengine-wand",
       "pack": "packs/me_wand_module",
       "files": 12,
       "hooks": {
@@ -178,6 +192,7 @@
     {
       "name": "perm",
       "namespace": "me_perm_module",
+      "modId": "macroengine-perm",
       "pack": "packs/me_perm_module",
       "files": 20,
       "hooks": {
@@ -193,6 +208,7 @@
     {
       "name": "title",
       "namespace": "me_title_module",
+      "modId": "macroengine-title",
       "pack": "packs/me_title_module",
       "files": 16,
       "hooks": {},
@@ -201,6 +217,7 @@
     {
       "name": "block",
       "namespace": "me_block_module",
+      "modId": "macroengine-block",
       "pack": "packs/me_block_module",
       "files": 8,
       "hooks": {},
@@ -209,6 +226,7 @@
     {
       "name": "item",
       "namespace": "me_item_module",
+      "modId": "macroengine-item",
       "pack": "packs/me_item_module",
       "files": 6,
       "hooks": {},
@@ -217,6 +235,7 @@
     {
       "name": "container",
       "namespace": "me_container_module",
+      "modId": "macroengine-container",
       "pack": "packs/me_container_module",
       "files": 9,
       "hooks": {},
@@ -225,6 +244,7 @@
     {
       "name": "interaction",
       "namespace": "me_interaction_module",
+      "modId": "macroengine-interaction",
       "pack": "packs/me_interaction_module",
       "files": 7,
       "hooks": {
@@ -237,6 +257,7 @@
     {
       "name": "gamerule",
       "namespace": "me_gamerule_module",
+      "modId": "macroengine-gamerule",
       "pack": "packs/me_gamerule_module",
       "files": 3,
       "hooks": {},
@@ -245,6 +266,7 @@
     {
       "name": "toggle",
       "namespace": "me_toggle_module",
+      "modId": "macroengine-toggle",
       "pack": "packs/me_toggle_module",
       "files": 25,
       "hooks": {},
@@ -253,6 +275,7 @@
     {
       "name": "trigger",
       "namespace": "me_trigger_module",
+      "modId": "macroengine-trigger",
       "pack": "packs/me_trigger_module",
       "files": 7,
       "hooks": {
@@ -265,6 +288,7 @@
     {
       "name": "cb",
       "namespace": "me_cb_module",
+      "modId": "macroengine-cb",
       "pack": "packs/me_cb_module",
       "files": 9,
       "hooks": {
@@ -277,6 +301,7 @@
     {
       "name": "macro",
       "namespace": "me_macro_module",
+      "modId": "macroengine-macro",
       "pack": "packs/me_macro_module",
       "files": 5,
       "hooks": {},
@@ -285,6 +310,7 @@
     {
       "name": "color",
       "namespace": "me_color_module",
+      "modId": "macroengine-color",
       "pack": "packs/me_color_module",
       "files": 10,
       "hooks": {},
@@ -293,6 +319,7 @@
     {
       "name": "diagnostics",
       "namespace": "me_diagnostics_module",
+      "modId": "macroengine-diagnostics",
       "pack": "packs/me_diagnostics_module",
       "files": 2,
       "hooks": {},
@@ -301,6 +328,7 @@
     {
       "name": "input",
       "namespace": "me_input_module",
+      "modId": "macroengine-input",
       "pack": "packs/me_input_module",
       "files": 41,
       "hooks": {},
@@ -309,6 +337,7 @@
     {
       "name": "logic",
       "namespace": "me_logic_module",
+      "modId": "macroengine-logic",
       "pack": "packs/me_logic_module",
       "files": 10,
       "hooks": {},
@@ -317,6 +346,7 @@
     {
       "name": "flag",
       "namespace": "me_flag_module",
+      "modId": "macroengine-flag",
       "pack": "packs/me_flag_module",
       "files": 13,
       "hooks": {},
@@ -325,6 +355,7 @@
     {
       "name": "rate_limit",
       "namespace": "me_rate_limit_module",
+      "modId": "macroengine-rate-limit",
       "pack": "packs/me_rate_limit_module",
       "files": 7,
       "hooks": {},
@@ -333,6 +364,7 @@
     {
       "name": "sound",
       "namespace": "me_sound_module",
+      "modId": "macroengine-sound",
       "pack": "packs/me_sound_module",
       "files": 3,
       "hooks": {},
@@ -341,6 +373,7 @@
     {
       "name": "hook",
       "namespace": "me_hook_module",
+      "modId": "macroengine-hook",
       "pack": "packs/me_hook_module",
       "files": 40,
       "hooks": {

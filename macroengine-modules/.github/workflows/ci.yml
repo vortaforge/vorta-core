@@ -154,6 +154,14 @@ jobs:
       - name: Build every pack
         run: ./gradlew --no-daemon --console=plain check dist
 
+      - name: Assert every jar is a loadable Fabric mod
+        # The bug this exists for: 26 jars were produced with no fabric.mod.json
+        # in any of them. They were data pack jars, so a mod loader ignored them,
+        # and the build was green. `dist` already runs this via checkJars; running
+        # it again here makes the failure its own named step instead of a line in
+        # the build log.
+        run: python3 tools/check_jars.py --dist build/dist
+
       - name: Summarise
         if: always()
         run: |

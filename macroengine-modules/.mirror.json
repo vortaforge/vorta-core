@@ -1,6 +1,6 @@
 {
-  "files": 22,
-  "bytes": 208951,
+  "files": 23,
+  "bytes": 233526,
   "symlinksDropped": 0,
   "paths": [
     ".github/workflows/ci.yml",
@@ -20,6 +20,7 @@
     "gradlew.bat",
     "modules.json",
     "settings.gradle",
+    "tools/check_jars.py",
     "tools/check_shape.py",
     "tools/split.py",
     "tools/summarize.py",
@@ -28,6 +29,6 @@
   ],
   "repo": "vortaforge/macroengine-modules",
   "branch": "main",
-  "commit": "f6d5757866d0e299c3caaef107948c1ba519c059",
+  "commit": "8bf116dae8e238d78e0172dc35e0314e1a62c78f",
   "note": "Snapshot of the default branch. Read-only: do not edit here."
 }
