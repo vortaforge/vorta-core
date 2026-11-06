@@ -23,17 +23,11 @@
       "commit": "f6d5757866d0e299c3caaef107948c1ba519c059",
       "files": 22,
       "bytes": 208951
-    },
-    "vorta-core": {
-      "branch": "main",
-      "commit": "2ed6fba57688bd3be8bf9969cce3569a178a7b93",
-      "files": 12,
-      "bytes": 77333
     }
   },
-  "mirrorsGeneratedAt": "2026-11-06T18:47:30.161971Z",
+  "mirrorsGeneratedAt": "2026-11-06T18:46:46.364856Z",
   "org": "vortaforge",
-  "generatedAt": "2026-11-06T18:47:29.366152Z",
+  "generatedAt": "2026-11-06T18:46:45.628235Z",
   "count": 5,
   "repositories": [
     {
@@ -114,7 +108,7 @@
       "fork": false,
       "defaultBranch": "main",
       "createdAt": "2026-11-06T17:17:52Z",
-      "pushedAt": "2026-11-06T18:46:50Z",
+      "pushedAt": "2026-11-06T18:46:04Z",
       "language": "Python",
       "topics": [],
       "stars": 0,

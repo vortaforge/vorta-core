@@ -34,12 +34,15 @@ core/                 mirror of vortaforge/core
 docs/                 mirror of vortaforge/docs        (nests to docs/docs/)
 .github/              mirror of vortaforge/.github     (workflows nest, do not run)
 macroengine-modules/  mirror of vortaforge/macroengine-modules
-vorta-core/           mirror of this repository, one sync behind
 ```
 
 A mirrored tree is a **snapshot**, not a checkout: no `.git`, not editable, and
-overwritten on the next run. `.mirror.json` at the top of each records the commit,
-the branch and the time it was taken. Edit in the source repository.
+overwritten on the next run. `.mirror.json` at the top of each records the commit
+and the branch it was taken from. Edit in the source repository.
+
+This repository does not mirror itself. It did, and since the copy could only be
+taken from the previous commit, every sync produced a commit that changed nothing
+but a pointer to the commit before it.
 
 `index.json` answers *"what is there?"*. `events.log` answers *"what happened, and
 when?"*, and the mirrored trees answer *"what is in them?"*. None replaces another.

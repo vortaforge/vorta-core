@@ -248,10 +248,17 @@ def main(argv: list[str]) -> int:
         wanted = set(args.only)
         repos = [r for r in repos if r["name"] in wanted]
 
-    by_name = {r["name"]: r for r in repos}
-    names = sorted(by_name)
-
+    # vorta-core does not mirror itself. It used to, and the copy was coherent
+    # only if taken from the *previous* commit - so every sync changed the mirror,
+    # which was a new commit, which changed the mirror again. An unbounded loop of
+    # commits whose only content is a pointer to the commit before it.
+    #
+    # `vorta-core/` is therefore not a mirror: this repository is itself. The
+    # source that matters - and the reason the mirror exists - is in the other
+    # repositories, and those do not have this problem.
     self_name = repository_name()
+    by_name = {r["name"]: r for r in repos if r["name"] != self_name}
+    names = sorted(by_name)
     mirrors = dict(index.get("mirrors", {}))
     stale: list[str] = []
     results: list[dict] = []
@@ -307,22 +314,7 @@ def main(argv: list[str]) -> int:
             if dest.exists():
                 clear(dest)
             dest.mkdir(parents=True, exist_ok=True)
-            if name == self_name:
-                # This repository's tree holds the mirror trees written by
-                # previous runs. Copying them in would mirror the mirrors - the
-                # first CI run pulled in 5 350 files that way - and would nest a
-                # level deeper on every run after.
-                #
-                # index.json and events.log change on every sync by design; the
-                # manifest carries a timestamp. Including them would produce a
-                # commit every six hours whose only content is the time.
-                record = copy_tree(
-                    source, dest,
-                    skip_paths=frozenset({MANIFEST, "index.json", "events.log"}),
-                    skip_dirs={self_name} | set(mirrors),
-                )
-            else:
-                record = copy_tree(source, dest)
+            record = copy_tree(source, dest)
         finally:
             shutil.rmtree(source.parent, ignore_errors=True)
 

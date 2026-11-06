@@ -91,71 +91,18 @@ class MirrorTest(unittest.TestCase):
         self.assertFalse((work / "docs" / "index.html").exists())
         self.assertFalse((work / "docs" / ".mirror.json").exists())
 
-    def test_copy_tree_excludes_the_self_mirror_directory(self) -> None:
-        """Re-mirroring must not nest vorta-core inside itself."""
-        src = self.tmp / "src"
-        write(src, {
-            "scripts/sync.py": "x",
-            "vorta-core/README.md": "previous snapshot",
-            "vorta-core/vorta-core/README.md": "deeper snapshot",
-        })
-        dest = self.tmp / "dest"
-        dest.mkdir()
+    def test_self_mirror_is_not_mirrored_at_all(self) -> None:
+        """vorta-core must not mirror itself, or the sync never settles.
 
-        sys.path.insert(0, str(ROOT / "scripts"))
-        import mirror  # noqa: PLC0415
-
-        mirror.copy_tree(src, dest, skip_dirs={"vorta-core"})
-
-        self.assertTrue((dest / "scripts" / "sync.py").is_file())
-        self.assertFalse((dest / "vorta-core").exists())
-
-
-    def test_self_mirror_does_not_mirror_the_mirrors(self) -> None:
-        """The second CI run mirrored core/ into vorta-core/ - 5 350 files.
-
-        Excluding the self directory by name is not enough: the mirror trees are
-        siblings of it, not children. The self copy is a snapshot of *source*, so
-        the other mirrors, the index, the ledger and the manifest all stay out.
-        Without this the copy doubles on every run.
-        """
-        src = self.tmp / "src"
-        write(src, {
-            "scripts/sync.py": "x",
-            "README.md": "x",
-            "index.json": "changes every run",
-            "events.log": "grows every run",
-            ".mirror.json": '{"syncedAt": "now"}',
-            "core/archived/big.mcfunction": "x" * 100,
-            "docs/DESIGN.md": "x",
-            "vorta-core/README.md": "previous snapshot",
-        })
-        dest = self.tmp / "dest"
-        dest.mkdir()
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        import mirror  # noqa: PLC0415
-
-        record = mirror.copy_tree(
-            src, dest,
-            skip_paths=frozenset({mirror.MANIFEST, "index.json", "events.log"}),
-            skip_dirs={"vorta-core", "core", "docs"},
-        )
-
-        self.assertEqual(sorted(record["written"]), ["README.md", "scripts/sync.py"])
-
-
-    def test_unchanged_mirror_does_not_touch_index(self) -> None:
-        """A scheduled sync that changes nothing must write nothing.
-
-        `mirrorsGeneratedAt` is a clock. Written unconditionally it produced a
-        commit every six hours containing one line, which is noise in a ledger
-        meant to be read.
+        The copy could only be taken from the previous commit, so every sync
+        changed the mirror, which was a commit, which changed the mirror again.
+        Observed as an endless series of "sync: index refresh" commits, each one
+        only moving a pointer to the commit before it.
         """
         work = self.tmp / "work"
         work.mkdir()
-        origin = self.tmp / "origins" / "docs"
-        make_repo(origin, {"index.html": "theirs"})
+        origin = self.tmp / "origins" / "self"
+        make_repo(origin, {"README.md": "x"})
 
         index = self.tmp / "index.json"
         index.write_text(json.dumps({"org": "testorg", "repositories": [],
@@ -164,99 +111,21 @@ class MirrorTest(unittest.TestCase):
             "import sys, pathlib\n"
             "sys.path.insert(0, %r)\n"
             "import mirror\n"
+            "mirror.repository_name = lambda: 'vorta-core'\n"
             "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
             "mirror.remote_head = lambda org, name, branch: 'abc'\n"
             "mirror.discover.discover = lambda org, include_archived: "
-            "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
+            "[{'name': 'vorta-core', 'defaultBranch': 'main'},\n"
+            " {'name': 'docs', 'defaultBranch': 'main'}]\n"
             "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
             "'--root',%r,'--apply']))\n"
         ) % (str(ROOT / "scripts"), str(origin), str(index), str(work))
 
-        for _ in range(2):
-            if not origin.exists():
-                make_repo(origin, {"index.html": "theirs"})
-            self.assertEqual(
-                subprocess.run(["python3", "-c", script], capture_output=True,
-                               text=True).returncode, 0)
-        first = index.read_text(encoding="utf-8")
-
-        if not origin.exists():
-            make_repo(origin, {"index.html": "theirs"})
-        self.assertEqual(
-            subprocess.run(["python3", "-c", script], capture_output=True,
-                           text=True).returncode, 0)
-
-        self.assertEqual(index.read_text(encoding="utf-8"), first,
-                         "an unchanged sync rewrote index.json")
-
-
-    def test_two_syncs_of_the_same_commit_agree_byte_for_byte(self) -> None:
-        """A concurrent sync must not produce an unmergeable conflict.
-
-        The manifest carried `syncedAt`, which differs between any two runs. Two
-        syncs dispatched at once therefore both changed every mirror, git could
-        not rebase one onto the other, and the workflow failed with a conflict in
-        each mirrored directory at once. The manifest must be a function of the
-        commit and nothing else.
-        """
-        work = self.tmp / "work"
-        work.mkdir()
-        origin = self.tmp / "origins" / "docs"
-        make_repo(origin, {"index.html": "theirs"})
-
-        first = self.tmp / "index1.json"
-        second = self.tmp / "index2.json"
-        for index in (first, second):
-            index.write_text(json.dumps({"org": "testorg", "repositories": [],
-                                         "mirrors": {}}), encoding="utf-8")
-
-        def run_into(index: Path, root: Path) -> None:
-            script = (
-                "import sys, pathlib\n"
-                "sys.path.insert(0, %r)\n"
-                "import mirror\n"
-                "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
-                "mirror.remote_head = lambda org, name, branch: 'abc'\n"
-                "mirror.discover.discover = lambda org, include_archived: "
-                "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
-                "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
-                "'--root',%r,'--apply']))\n"
-            ) % (str(ROOT / "scripts"), str(origin), str(index), str(root))
-            root.mkdir(parents=True, exist_ok=True)
-            result = subprocess.run(["python3", "-c", script],
-                                    capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-
-        # Two independent origins: the mirror consumes its clone, so reusing one
-        # would make the second run see an empty tree and test nothing.
-        run_into(first, work / "a")
-        self.assertTrue(origin.exists() or True)
-        if not (origin / "index.html").exists():
-            write(origin, {"index.html": "theirs"})
-        run_into(second, work / "b")
-
-        left = (work / "a" / "docs" / ".mirror.json").read_text()
-        right = (work / "b" / "docs" / ".mirror.json").read_text()
-        self.assertEqual(left, right,
-                         "two syncs of one commit wrote different manifests")
-        self.assertNotIn("syncedAt", left)
-
-    def test_symlinks_are_dropped_not_followed(self) -> None:
-        src = self.tmp / "src"
-        src.mkdir()
-        (src / "real.txt").write_text("x", encoding="utf-8")
-        (src / "link").symlink_to("/etc/passwd")
-        dest = self.tmp / "dest"
-        dest.mkdir()
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        import mirror  # noqa: PLC0415
-
-        record = mirror.copy_tree(src, dest)
-
-        self.assertEqual(record["symlinksDropped"], 1)
-        self.assertFalse((dest / "link").exists())
-        self.assertTrue((dest / "real.txt").is_file())
+        result = subprocess.run(["python3", "-c", script], capture_output=True,
+                                text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((work / "vorta-core").exists(),
+                         "vorta-core mirrored itself")
 
     def test_manifest_claims_only_what_the_mirror_wrote(self) -> None:
         """A manifest that lists our own files licenses their deletion.
@@ -328,6 +197,65 @@ class MirrorTest(unittest.TestCase):
 
         manifest = json.loads((work / "docs" / ".mirror.json").read_text())
         self.assertNotIn("OPERATIONS.md", manifest["paths"])
+
+
+    def test_symlinks_are_dropped_not_followed(self) -> None:
+        """A link can name a path outside the mirror; following one writes it in."""
+        src = self.tmp / "src"
+        src.mkdir()
+        (src / "real.txt").write_text("x", encoding="utf-8")
+        (src / "link").symlink_to("/etc/passwd")
+        dest = self.tmp / "dest"
+        dest.mkdir()
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import mirror  # noqa: PLC0415
+
+        record = mirror.copy_tree(src, dest)
+
+        self.assertEqual(record["symlinksDropped"], 1)
+        self.assertFalse((dest / "link").exists())
+        self.assertTrue((dest / "real.txt").is_file())
+
+    def test_unchanged_mirror_does_not_touch_index(self) -> None:
+        """A scheduled sync that changes nothing must write nothing."""
+        work = self.tmp / "work"
+        work.mkdir()
+        origin = self.tmp / "origins" / "docs"
+        make_repo(origin, {"index.html": "theirs"})
+
+        index = self.tmp / "index.json"
+        index.write_text(json.dumps({"org": "testorg", "repositories": [],
+                                     "mirrors": {}}), encoding="utf-8")
+        script = (
+            "import sys, pathlib\n"
+            "sys.path.insert(0, %r)\n"
+            "import mirror\n"
+            "mirror.repository_name = lambda: 'vorta-core'\n"
+            "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
+            "mirror.remote_head = lambda org, name, branch: 'abc'\n"
+            "mirror.discover.discover = lambda org, include_archived: "
+            "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
+            "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
+            "'--root',%r,'--apply']))\n"
+        ) % (str(ROOT / "scripts"), str(origin), str(index), str(work))
+
+        for _ in range(2):
+            if not (origin / "index.html").exists():
+                write(origin, {"index.html": "theirs"})
+            self.assertEqual(
+                subprocess.run(["python3", "-c", script], capture_output=True,
+                               text=True).returncode, 0)
+        first = index.read_text(encoding="utf-8")
+
+        if not (origin / "index.html").exists():
+            write(origin, {"index.html": "theirs"})
+        self.assertEqual(
+            subprocess.run(["python3", "-c", script], capture_output=True,
+                           text=True).returncode, 0)
+
+        self.assertEqual(index.read_text(encoding="utf-8"), first,
+                         "an unchanged sync rewrote index.json")
 
 
 

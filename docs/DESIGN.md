@@ -167,11 +167,23 @@ That in turn is why the manifest is built from what was *copied* rather than fro
 a listing of the destination: a manifest built by walking `docs/` would claim this
 repository's own notes and license their deletion on the next run.
 
-### Self-mirroring
+### Not self-mirroring, and why that took three attempts
 
-`vorta-core` is one of the repositories being mirrored, so `vorta-core/` holds a
-copy of this repository as of the previous sync. It is taken from GitHub, not from
-the working directory, which is why it cannot recurse: the clone predates the
-directory it would be written into. The `vorta-core/` directory inside it is
-excluded by name as a second guarantee — without it, each run would nest one level
-deeper.
+The first version mirrored `vorta-core` into `vorta-core/` like every other
+repository. There is no way to take that copy from the tree being built, so it had
+to come from the previous commit — which meant the mirror changed on every run,
+which produced a commit, which changed the mirror again. An endless series of
+"sync: index refresh" commits, each moving one pointer.
+
+Excluding the directory from the copy fixed the nesting but not the loop; the
+pointer still moved. Dropping the timestamp fixed the manifest conflicts but not
+the loop either. The loop only closes when the repository does not mirror itself
+at all, so it does not: `repository_name()` is filtered out of the target list.
+
+### Manifests carry no clock
+
+`.mirror.json` holds the commit, the branch and the file list. It deliberately
+does not hold the time it was taken. Two syncs of the same commit must produce
+byte-identical files, because two dispatches can overlap and git has to be able to
+order them; a `syncedAt` field turned every overlapping run into a conflict in
+every mirrored directory at once. `commit` already says how fresh a snapshot is.
