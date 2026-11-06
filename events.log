@@ -5,3 +5,4 @@
 {"actor": "backfill", "at": "2026-11-06T17:17:52Z", "detail": "backfilled from GitHub createdAt", "repo": "vorta-core", "type": "created"}
 {"actor": "backfill", "at": "2026-11-06T17:37:30Z", "detail": "backfilled from GitHub createdAt", "repo": "vorta-core-synctest", "type": "created"}
 {"actor": "vorta-core sync", "at": "2026-11-06T17:49:43.258868Z", "detail": "language: null -> Python", "repo": "vorta-core", "type": "changed"}
+{"actor": "tickwarden", "at": "2026-11-06T17:51:22.782318Z", "detail": "created via API round-trip test", "repo": "sync-demo-repo", "type": "created"}
