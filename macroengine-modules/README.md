@@ -8,7 +8,7 @@ The arrangement mirrors Fabric API: the core carries the engine, each module
 attaches to it through *hook tags*, and the core never names a module.
 
 ```
-me_core_module      engine: internals, load, tick, hook slots
+me_core_module      the engine: every internal tree, load, tick, hook slots
 me_cmd_module       command execution, freeze
 me_player_module    player registry
 me_wand_module      wand
@@ -27,10 +27,13 @@ Two rules make that possible, and the verifier enforces both:
 1. **The core never calls a module by name.** When the core needs a module it calls
    `function #me_core_module:hook/<slot>`. The module defines *the same tag id* in
    its own pack and adds itself; the game unions the two definitions.
-2. **A module never reaches into another module's `core/internal` tree.** The only
-   thing it may call is the other module's *published* surface.
+2. **Every implementation lives in the core.** A module ships only its public
+   surface and calls `me_core_module:core/internal/...`. It never ships a
+   `core/internal/` tree of its own, and it never calls another module - two
+   modules that need the same thing both call the core.
 
-`gradlew check` verifies both. Deleting a module does not break the pack.
+`gradlew check` verifies both. Deleting a module never breaks the pack, because
+nothing outside that module ever names it.
 
 ## Id scheme
 
@@ -46,8 +49,13 @@ module, and the path says which feature. Old `macroengine:api/cmd/other/run` bec
 |---|---|
 | `macroengine:api/wand/give_custom` | `me_wand_module:wand/give_custom` |
 | `macroengine:systems/logic/if_or` | `me_core_module:logic/if_or` |
-| `macroengine:core/internal/text/split` | `me_core_module:text/split` (published) |
-| `macroengine:core/internal/player/init` | `me_player_module:core/internal/player/init` |
+| `macroengine:core/internal/text/split` | `me_core_module:core/internal/text/split` |
+| `macroengine:api/player/init` | `me_core_module:core/internal/player/init` |
+| `macroengine:api/store/render` | `me_core_module:core/internal/store/render` |
+
+Note what the last two rows have in common: they are public `api/` functions that
+the *core itself* calls, so they are infrastructure and moved into the core. The
+module keeps a thin public function at its own id that forwards to them.
 
 ## Building
 

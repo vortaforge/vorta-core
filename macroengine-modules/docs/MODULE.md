@@ -12,13 +12,12 @@ me_shout_module/
 └── data/
     └── me_shout_module/
         ├── function/
-        │   ├── shout/
-        │   │   ├── send.mcfunction          # published surface
-        │   │   └── internal/
-        │   │       └── format.mcfunction    # private
-        │   └── hook/
-        │       └── tick.mcfunction          # this module's tick work
+        │   └── shout/
+        │       └── send.mcfunction          # public surface - all you ship
         └── tags/                            # (optional) your own tags
+
+# the implementation of `shout/send`, if it needs one, lives in the core pack:
+#   me_core_module/data/me_core_module/function/core/internal/shout/send.mcfunction
 ```
 
 `pack.mcmeta` (26.x form):
@@ -68,20 +67,31 @@ function me_core_module:text/split
 data modify storage me_shout:work first set from storage macroengine:output string.result[0]
 ```
 
-Do **not** call `core/internal/...`. If you need something and it is not published,
-the right answer is not to call it anyway: either write it in your own module, or
-open a "let's publish this" issue on that module's repository.
+You **do** call `core/internal/...` - that is where the implementation is:
+
+```mcfunction
+function me_core_module:core/internal/shout/format
+```
+
+What you must never do is ship your own copy of it. There is exactly one
+implementation of anything, it lives in `me_core_module`, and your pack contains
+your public functions plus their hook contributions - no `core/` directory. A
+module pack with a `core/internal/` tree is a second copy of core code that dies
+with the module; `verify.py` rejects it as `module-internal`.
 
 ## 4. Use another module
 
-Call an existing module's published surface:
+Modules do not call each other. Two modules that both need the same thing both
+call core:
 
 ```mcfunction
-function me_container_module:container/slot_set
+function me_core_module:core/internal/container/slot_set
 ```
 
-Not `me_container_module:core/internal/container/slot_set_do`. The first is a
-contract; the second is that module's own business and may be renamed tomorrow.
+The reason is removability. If `shout` calls `container`, deleting `container`
+breaks `shout`. If both call core, deleting either one leaves the other running -
+and the dependency graph stays a star instead of a mesh. `verify.py --graph`
+enforces the star: every module points at core, core points at nothing.
 
 ## 5. Build
 
@@ -113,7 +123,8 @@ If you see these:
 | Message | Meaning |
 |---|---|
 | `dangling-reference` | there is a `function x:y` but `y` is defined in no pack |
-| `private-access` | you reached into another module's `core/internal` tree |
+| `module-internal` | you shipped a `core/internal/` tree inside your module |
+| `private-access` | you called another module instead of core |
 | `hooks` | the core calls a module by name (the core's fault, not yours) |
 | `cycle` | the module graph has a cycle; usually two modules calling each other |
 | `pack-layout` | missing `pack.mcmeta`, or an empty pack |

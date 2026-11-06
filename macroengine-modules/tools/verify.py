@@ -199,6 +199,25 @@ def check_old_namespace(root: Path, problems: Problems):
                          f"{path.relative_to(root)} still references {OLD_NAMESPACE}:")
 
 
+def check_no_module_internals(root: Path, problems: Problems):
+    """No module may ship a `core/internal/` tree. Those belong to core.
+
+    This is the rule the user reported twice. A module pack containing
+    `data/me_cb_module/function/core/internal/cb/apply_defaults.mcfunction` is
+    a second copy of core code that reads like core's own tree but dies with the
+    module, and it is invisible to a reference check because the id resolves.
+    """
+    for pack in sorted(root.glob("me_*_module")):
+        if pack.name == "me_core_module":
+            continue
+        for path in sorted(pack.rglob("core/internal/**")):
+            if path.is_file():
+                problems.add(
+                    "module-internal",
+                    f"{path.relative_to(root)} is core's internal tree shipped "
+                    f"inside {pack.name}; internals belong to me_core_module only")
+
+
 def check_private(root: Path, problems: Problems):
     """A module may call core's public surface, never another module's internals."""
     for path in sorted(root.rglob("*.mcfunction")):
@@ -220,9 +239,18 @@ def check_private(root: Path, problems: Problems):
             if callee is None or callee == caller:
                 continue
             if area.startswith(PRIVATE + "/") or f"/{PRIVATE}/" in f"/{area}":
-                problems.add("private-access",
-                             f"me_{caller}_module calls {ref} - that is me_{callee}_module's "
-                             f"private tree; it must use the module's public surface")
+                # Only core may own an internal tree. Any other owner means the
+                # call targets a tree that must not exist.
+                if callee != "core":
+                    problems.add("private-access",
+                                 f"me_{caller}_module calls {ref} - that is "
+                                 f"me_{callee}_module's private tree; internals "
+                                 f"live in me_core_module and are called as "
+                                 f"me_core_module:{area}")
+                elif caller != "core":
+                    # Reaching core's internals is correct and intended: that is
+                    # how every module gets its implementation. Nothing to report.
+                    pass
 
 
 def check_pack_completeness(root: Path, namespaces, problems: Problems):
@@ -359,6 +387,7 @@ def main(argv: list[str]) -> int:
     modules = check_pack_completeness(root, namespaces, problems)
     check_resolve(root, functions, tags, problems)
     check_old_namespace(root, problems)
+    check_no_module_internals(root, problems)
     check_private(root, problems)
     check_loader(root, tags, problems)
     check_pack_format(root, problems)

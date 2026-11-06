@@ -96,104 +96,42 @@
       "name": "core",
       "namespace": "me_core_module",
       "pack": "packs/me_core_module",
-      "files": 593,
+      "files": 1062,
       "hooks": {},
-      "publishes": [
-        {
-          "id": "me_core_module:ext/input/int_to_score",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:ext/perm_count",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:ext/player/add_var_clamped",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:ext/player/toggle_var",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:ext/world/count_near",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/concat",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/ctl",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/lower",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/num_check",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/replace",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/reset",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/safe",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/scan_deny",
-          "moved": true
-        },
-        {
-          "id": "me_core_module:text/split",
-          "moved": true
-        }
-      ]
+      "publishes": []
     },
     {
       "name": "player",
       "namespace": "me_player_module",
       "pack": "packs/me_player_module",
-      "files": 251,
+      "files": 58,
       "hooks": {
         "player_enumerate": [
-          "me_player_module:core/internal/player/enumerate"
+          "me_core_module:core/internal/player/enumerate"
         ],
         "player_resolve": [
-          "me_player_module:core/internal/player/resolve"
+          "me_core_module:core/internal/player/resolve"
         ],
         "player_init": [
-          "me_player_module:core/internal/player/init"
+          "me_core_module:core/internal/player/init"
         ],
         "player_init_online": [
-          "me_player_module:core/internal/player/init_online"
+          "me_core_module:core/internal/player/init_online"
         ],
         "player_init_from_name": [
-          "me_player_module:core/internal/player/init_from_name"
+          "me_core_module:core/internal/player/init_from_name"
         ],
         "player_get_name": [
           "me_player_module:player/get_name"
         ]
       },
-      "publishes": [
-        {
-          "id": "me_player_module:player/init_from_name",
-          "moved": true
-        }
-      ]
+      "publishes": []
     },
     {
       "name": "world",
       "namespace": "me_world_module",
       "pack": "packs/me_world_module",
-      "files": 29,
+      "files": 27,
       "hooks": {},
       "publishes": []
     },
@@ -201,7 +139,7 @@
       "name": "tui",
       "namespace": "me_tui_module",
       "pack": "packs/me_tui_module",
-      "files": 8,
+      "files": 4,
       "hooks": {},
       "publishes": []
     },
@@ -209,10 +147,10 @@
       "name": "cmd",
       "namespace": "me_cmd_module",
       "pack": "packs/me_cmd_module",
-      "files": 185,
+      "files": 123,
       "hooks": {
         "cmd_freeze_tick": [
-          "me_cmd_module:core/internal/cmd/freeze/tick"
+          "me_core_module:core/internal/cmd/freeze/tick"
         ]
       },
       "publishes": []
@@ -221,7 +159,7 @@
       "name": "store",
       "namespace": "me_store_module",
       "pack": "packs/me_store_module",
-      "files": 71,
+      "files": 32,
       "hooks": {},
       "publishes": []
     },
@@ -229,10 +167,10 @@
       "name": "wand",
       "namespace": "me_wand_module",
       "pack": "packs/me_wand_module",
-      "files": 26,
+      "files": 12,
       "hooks": {
         "wand_tick": [
-          "me_wand_module:core/internal/wand/tick_scan"
+          "me_core_module:core/internal/wand/tick_scan"
         ]
       },
       "publishes": []
@@ -241,10 +179,10 @@
       "name": "perm",
       "namespace": "me_perm_module",
       "pack": "packs/me_perm_module",
-      "files": 34,
+      "files": 20,
       "hooks": {
         "perm_tick": [
-          "me_perm_module:core/internal/perm/trigger/tick_start"
+          "me_core_module:core/internal/perm/trigger/tick_start"
         ],
         "perm_require": [
           "me_perm_module:perm/require"
@@ -256,7 +194,7 @@
       "name": "title",
       "namespace": "me_title_module",
       "pack": "packs/me_title_module",
-      "files": 17,
+      "files": 16,
       "hooks": {},
       "publishes": []
     },
@@ -264,7 +202,7 @@
       "name": "block",
       "namespace": "me_block_module",
       "pack": "packs/me_block_module",
-      "files": 20,
+      "files": 8,
       "hooks": {},
       "publishes": []
     },
@@ -272,7 +210,7 @@
       "name": "item",
       "namespace": "me_item_module",
       "pack": "packs/me_item_module",
-      "files": 16,
+      "files": 6,
       "hooks": {},
       "publishes": []
     },
@@ -280,55 +218,18 @@
       "name": "container",
       "namespace": "me_container_module",
       "pack": "packs/me_container_module",
-      "files": 27,
+      "files": 9,
       "hooks": {},
-      "publishes": [
-        {
-          "id": "me_container_module:container/addr",
-          "wraps": "me_container_module:core/internal/container/_addr",
-          "contract": "Resolve the address in storage macroengine:container tmp.k (x/y/z + optional slot). Returns 1 when it resolved, 0 otherwise."
-        },
-        {
-          "id": "me_container_module:container/exists",
-          "wraps": "me_container_module:core/internal/container/_exists",
-          "contract": "Returns 1 when storage macroengine:container tmp.k names a block with an Items list, 0 otherwise. Does not touch macroengine:output."
-        },
-        {
-          "id": "me_container_module:container/slot_at",
-          "wraps": "me_container_module:core/internal/container/_ff_loop",
-          "contract": "Return the next slot index at or after #ct_i in storage macroengine:container tmp.f, or -1 when the container is full. Macro function."
-        },
-        {
-          "id": "me_container_module:container/find_first_free",
-          "wraps": "me_container_module:core/internal/container/_size_pick",
-          "contract": "Resolve the container size from storage macroengine:container tmp.k (honouring the `ovr` field) and store it in #ct_size macroengine.tmp. Returns 1 when a size in 1..256 was found, 0 otherwise."
-        },
-        {
-          "id": "me_container_module:container/_src_first",
-          "moved": true
-        },
-        {
-          "id": "me_container_module:container/slot_clear_do",
-          "moved": true
-        },
-        {
-          "id": "me_container_module:container/slot_get_do",
-          "moved": true
-        },
-        {
-          "id": "me_container_module:container/slot_set_do",
-          "moved": true
-        }
-      ]
+      "publishes": []
     },
     {
       "name": "interaction",
       "namespace": "me_interaction_module",
       "pack": "packs/me_interaction_module",
-      "files": 16,
+      "files": 7,
       "hooks": {
         "interaction_tick": [
-          "me_interaction_module:core/internal/interaction/tick_scan"
+          "me_core_module:core/internal/interaction/tick_scan"
         ]
       },
       "publishes": []
@@ -337,7 +238,7 @@
       "name": "gamerule",
       "namespace": "me_gamerule_module",
       "pack": "packs/me_gamerule_module",
-      "files": 13,
+      "files": 3,
       "hooks": {},
       "publishes": []
     },
@@ -353,31 +254,22 @@
       "name": "trigger",
       "namespace": "me_trigger_module",
       "pack": "packs/me_trigger_module",
-      "files": 12,
+      "files": 7,
       "hooks": {
         "trigger_dispatch": [
-          "me_trigger_module:core/internal/trigger/dispatch"
+          "me_core_module:core/internal/trigger/dispatch"
         ]
       },
-      "publishes": [
-        {
-          "id": "me_trigger_module:trigger/call",
-          "moved": true
-        },
-        {
-          "id": "me_trigger_module:trigger/call2",
-          "moved": true
-        }
-      ]
+      "publishes": []
     },
     {
       "name": "cb",
       "namespace": "me_cb_module",
       "pack": "packs/me_cb_module",
-      "files": 23,
+      "files": 9,
       "hooks": {
         "cb_tick": [
-          "me_cb_module:core/internal/cb/tick"
+          "me_core_module:core/internal/cb/tick"
         ]
       },
       "publishes": []
@@ -394,7 +286,7 @@
       "name": "color",
       "namespace": "me_color_module",
       "pack": "packs/me_color_module",
-      "files": 13,
+      "files": 10,
       "hooks": {},
       "publishes": []
     },
@@ -410,7 +302,7 @@
       "name": "input",
       "namespace": "me_input_module",
       "pack": "packs/me_input_module",
-      "files": 45,
+      "files": 41,
       "hooks": {},
       "publishes": []
     },
@@ -434,7 +326,7 @@
       "name": "rate_limit",
       "namespace": "me_rate_limit_module",
       "pack": "packs/me_rate_limit_module",
-      "files": 14,
+      "files": 7,
       "hooks": {},
       "publishes": []
     },
@@ -450,10 +342,10 @@
       "name": "hook",
       "namespace": "me_hook_module",
       "pack": "packs/me_hook_module",
-      "files": 88,
+      "files": 40,
       "hooks": {
         "hook_tick": [
-          "me_hook_module:core/internal/hook/tick_scan"
+          "me_core_module:core/internal/hook/tick_scan"
         ]
       },
       "publishes": []

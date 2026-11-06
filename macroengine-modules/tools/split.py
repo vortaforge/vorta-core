@@ -49,10 +49,26 @@ from pathlib import Path
 # (module, ordered path prefixes). Longest prefix wins. Anything unmatched falls to
 # core, and `--report-unmapped` prints those rather than letting them disappear.
 #
-# `api/<area>` and `core/internal/api/<area>` are assigned together on purpose:
-# they are the public face and the private implementation of the same area, and
-# splitting them would build a boundary that points the wrong way - the public
-# function would reach across it into the neighbour's private tree.
+# THE RULE: `core/internal/**` belongs to core. Always. Every module ships only
+# its public surface and calls the core by fully-qualified id
+# (`me_core_module:core/internal/<area>/<fn>`).
+#
+# This is deliberately *not* the "each module owns its own internal tree" shape.
+# That shape was tried and it is wrong for two reasons:
+#
+#   * The implementation of a feature is not the feature's private business in a
+#     datapack. Every function in the pack runs in the same namespace-less
+#     command context; there is no encapsulation to protect. A module's own
+#     `core/internal/` copy is simply a *second* copy of core code living in the
+#     module, so fixing a bug meant fixing it twice and deleting the module
+#     orphaned an implementation core still needs.
+#   * It produced exactly the failure the user reported twice: a module pack
+#     shipping `data/me_cb_module/function/core/internal/cb/...` - a path that
+#     reads like core's own tree but is private to the module and discarded
+#     with it.
+#
+# So `core` matches every `core/internal/` prefix, and no other entry in this
+# table may contain `internal`. A test enforces that (test_split_guard.py).
 MODULES: list[tuple[str, list[str]]] = [
     # --- the engine ------------------------------------------------------
     # Core owns internals, handlers, gates, load and tick. Nothing else.
@@ -66,10 +82,10 @@ MODULES: list[tuple[str, list[str]]] = [
         "",
         "core/",                        # dispatch, queue, state, config, lib, tick
         "gate/",                        # load gate, consent, version
-        "core/internal/api/",           # the handlers behind api/<x>
-        "core/internal/load/",          # load sequencing
-        "core/internal/events/",        # engine event bus
-        "core/internal/ext/",           # core service primitives
+        # Every implementation tree in the pack. This is the whole point: the
+        # handlers, the per-feature implementations, the services. A module that
+        # needs one calls it by id; none of them ship inside a module.
+        "core/internal/",
 
 
         # --- kernel services ---
@@ -79,8 +95,8 @@ MODULES: list[tuple[str, list[str]]] = [
         # Shipping them as modules would either break the engine when they are
         # deleted or force the engine through a hook tag to add two numbers.
         #
-        # They are still published under a stable id (see PUBLISHED_SERVICES), so a
-        # feature module calls them the same way it calls any other core API.
+        # A feature module calls them the same way it calls any other core
+        # function: by fully-qualified id.
         "systems/math/", "core/internal/systems/math/", "core/internal/math/",
         "systems/string/", "core/internal/systems/string/",
         "systems/text/", "core/internal/text/",
@@ -98,54 +114,47 @@ MODULES: list[tuple[str, list[str]]] = [
     ]),
 
     # --- feature modules -------------------------------------------------
-    # Every module owns BOTH halves of its feature: the public `api/<area>/`
-    # surface and the `core/internal/<area>/` implementation behind it. A module
-    # that owned only the public half would have nowhere to put its own internals
-    # and would end up reaching into core's, which is the bug this fixes.
-    ("player",    ["player/", "core/internal/player/"]),
-    ("world",     ["world/", "core/internal/world/"]),
-    ("tui",       ["tui/", "core/internal/tui/"]),
-    ("cmd",       ["api/cmd/", "core/internal/api/cmd/", "core/internal/cmd/"]),
-    ("store",     ["api/store/", "core/internal/api/store/"]),
-    ("wand",      ["api/wand/", "core/internal/api/wand/"]),
-    ("perm",      ["api/perm/", "core/internal/api/perm/"]),
-    ("title",     ["api/title/", "core/internal/api/title/"]),
-    ("block",     ["api/block/", "core/internal/api/block/"]),
-    ("item",      ["api/item/", "core/internal/api/item/"]),
-    ("container", ["api/container/", "core/internal/api/container/"]),
-    ("interaction", ["api/interaction/", "core/internal/api/interaction/"]),
-    ("gamerule",  ["api/gamerule/", "core/internal/api/gamerule/"]),
+    # Public surface only. The implementation behind each of these lives in core
+    # under `core/internal/<area>/` and the module calls it by id.
+    ("player",    ["player/"]),
+    ("world",     ["world/"]),
+    ("tui",       ["tui/"]),
+    ("cmd",       ["api/cmd/"]),
+    ("store",     ["api/store/"]),
+    ("wand",      ["api/wand/"]),
+    ("perm",      ["api/perm/"]),
+    ("title",     ["api/title/"]),
+    ("block",     ["api/block/"]),
+    ("item",      ["api/item/"]),
+    ("container", ["api/container/"]),
+    ("interaction", ["api/interaction/"]),
+    ("gamerule",  ["api/gamerule/"]),
     ("toggle",    ["api/toggle/"]),
-    ("trigger",   ["api/trigger/", "core/internal/api/trigger/"]),
-    ("cb",        ["api/cb/", "core/internal/api/cb/"]),
+    ("trigger",   ["api/trigger/"]),
+    ("cb",        ["api/cb/"]),
     ("macro",     ["api/macro/"]),
-    ("color",     ["api/color/", "core/internal/systems/color/"]),
+    ("color",     ["api/color/"]),
     ("diagnostics", ["api/diagnostics/"]),
 
     # --- foundation modules ----------------------------------------------
     # These were `systems/<x>/` in the original pack and got dumped into core by
-    # the `systems/` catch-all. They are features with a public surface, an
-    # internal tree and no business living in the engine.
-    ("input",     ["input/", "core/internal/input/"]),
+    # the `systems/` catch-all. They are features with their own public surface
+    # and no business living in the engine.
+    ("input",     ["input/"]),
     ("logic",     ["systems/logic/"]),
     ("flag",      ["systems/flag/"]),
-    ("rate_limit", ["systems/rate_limit/", "core/internal/systems/rate_limit/"]),
+    ("rate_limit", ["systems/rate_limit/"]),
     ("sound",     ["systems/sound/"]),
-    # The public hook surface and the handlers behind it are one feature, so they
-    # move together - the same rule as every other area. Leaving the handlers in
-    # core is what made the hook module reach into core's private tree.
-    ("hook",      ["systems/hook/", "core/internal/systems/hook/"]),
+    # The public hook surface. The slot handlers behind it stay in core, where
+    # they are published as the `core/internal/hook/*` implementation the module
+    # and the core's tick driver both call.
+    ("hook",      ["systems/hook/"]),
 ]
 
-# `core/internal/systems/<x>/` is the engine behind the `api/<x>/` module of the same
-# name - the tick driver, the queues, the state. It belongs to the module that owns
-# the feature, not to core: leaving it in core is what produced the `core -> cb ->
-# core` cycle on the first run.
-#
-# `core/internal/systems/` entries with no `api/` counterpart (hook, log, math,
-# rate_limit, rng, string, uuid, obj, color) stay in core, because core itself calls
-# them and they have no public face of their own.
-MODULE_OWNED_ENGINE = {"cb", "color"}
+# Kept for the file-layout pass only. Nothing is module-owned any more: every
+# `core/internal/**` path belongs to core, so this is empty by construction and
+# `assign_module` has nothing to override.
+MODULE_OWNED_ENGINE: set[str] = set()
 
 OLD_NAMESPACE = "macroengine"
 
@@ -231,128 +240,60 @@ HOOK_CONTRIBUTIONS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Cross-module calls that went into another module's private tree.
+# Cross-module calls.
 #
-# The split inherits this from the original pack: `api/block` was written when
-# container was part of the same namespace, so it calls `core/internal/container/*`
-# directly. Once the two are separate packs that is a boundary violation - and it
-# is the one that actually breaks: a module is allowed to be absent, so a call into
-# its private tree is a call into a function that may not exist.
+# Under the old layout each module owned a private copy of its implementation, so
+# a call from one module into another's tree had to be laundered through a
+# published wrapper. That layout is gone: internals live in core and every module
+# calls them directly by fully-qualified id. There is therefore nothing to
+# publish and nothing to rewrite between modules - the single generic rule in
+# `_cross_module_rewrite` covers every case, including the module calling its own
+# former internal.
 #
-# The fix is the Fabric API fix: the callee publishes the primitive, the caller
-# uses the publication. Doing it here rather than by hand keeps it reproducible
-# when the source pack is re-cut.
+# The tables are kept (empty) rather than deleted so the generated manifests and
+# the determinism test keep the same shape.
 # ---------------------------------------------------------------------------
 # (module, new public id, source internal id, one-line contract)
-PUBLISHED_PRIMITIVES = [
-    ("container", "container/addr", "core/internal/container/_addr",
-     "Resolve the address in storage macroengine:container tmp.k (x/y/z + optional slot). "
-     "Returns 1 when it resolved, 0 otherwise."),
-    ("container", "container/exists", "core/internal/container/_exists",
-     "Returns 1 when storage macroengine:container tmp.k names a block with an "
-     "Items list, 0 otherwise. Does not touch macroengine:output."),
-    ("container", "container/slot_at", "core/internal/container/_ff_loop",
-     "Return the next slot index at or after #ct_i in storage macroengine:container "
-     "tmp.f, or -1 when the container is full. Macro function."),
-    ("container", "container/find_first_free", "core/internal/container/_size_pick",
-     "Resolve the container size from storage macroengine:container tmp.k (honouring "
-     "the `ovr` field) and store it in #ct_size macroengine.tmp. Returns 1 when a "
-     "size in 1..256 was found, 0 otherwise."),
-]
+PUBLISHED_PRIMITIVES: list[tuple[str, str, str, str]] = []
 
-# Caller-side rewrites. A module may only reach another module through the
-# published id; the private path must not appear anywhere outside its own module.
-CROSS_MODULE_REWRITES = [
-    # input validating a captured string - the same primitives text/ and ext/ were
-    # already published for, reached from a different module.
-    ("me_core_module:core/internal/text/num_check",
-     "me_core_module:text/num_check"),
-    ("me_core_module:core/internal/text/scan_deny",
-     "me_core_module:text/scan_deny"),
-    ("me_core_module:core/internal/ext/input/int_to_score",
-     "me_core_module:core/ext/input/int_to_score"),
-    # hook resolving a player name it was handed. The player module publishes
-    # get_name; init_from_name is the same contract one step earlier.
-    ("me_player_module:core/internal/player/init_from_name",
-     "me_player_module:player/init_from_name"),
-    ("me_container_module:core/internal/container/_addr",
-     "me_container_module:container/addr"),
-    ("me_container_module:core/internal/container/_exists",
-     "me_container_module:container/exists"),
-    ("me_container_module:core/internal/container/_ff_loop",
-     "me_container_module:container/slot_at"),
-    ("me_container_module:core/internal/container/_size_pick",
-     "me_container_module:container/find_first_free"),
-    ("me_container_module:core/internal/container/slot_set_do",
-     "me_container_module:container/slot_set_do"),
-    ("me_container_module:core/internal/container/slot_get_do",
-     "me_container_module:container/slot_get_do"),
-    ("me_container_module:core/internal/container/slot_clear_do",
-     "me_container_module:container/slot_clear_do"),
-    ("me_container_module:core/internal/container/_src_first",
-     "me_container_module:container/src_first"),
-    # trigger: the perm module's trigger executor was calling trigger's private
-    # call/call2. They are the module's dispatch primitives, so they become public.
-    ("me_trigger_module:core/internal/trigger/call",
-     "me_trigger_module:trigger/call"),
-    ("me_trigger_module:core/internal/trigger/call2",
-     "me_trigger_module:trigger/call2"),
-    # core's text primitives used by gamerule to normalise a user-supplied name,
-    # and by store to split/concat/validate a rendered value.
-    ("me_core_module:core/internal/text/replace",
-     "me_core_module:text/replace"),
-    ("me_core_module:core/internal/text/lower",
-     "me_core_module:text/lower"),
-    ("me_core_module:core/internal/text/reset",
-     "me_core_module:text/reset"),
-    ("me_core_module:core/internal/text/split",
-     "me_core_module:text/split"),
-    ("me_core_module:core/internal/text/concat",
-     "me_core_module:text/concat"),
-    ("me_core_module:core/internal/text/safe",
-     "me_core_module:text/safe"),
-    ("me_core_module:core/internal/text/ctl",
-     "me_core_module:text/ctl"),
-    # core's engine primitives that a feature module legitimately needs. These are
-    # the "core services" of the Fabric-API arrangement: a small, stable surface
-    # every module may call, kept separate from the internals that change freely.
-    ("me_core_module:core/internal/ext/perm_count",
-     "me_core_module:core/ext/perm_count"),
-    ("me_core_module:core/internal/ext/player/add_var_clamped",
-     "me_core_module:core/ext/player/add_var_clamped"),
-    ("me_core_module:core/internal/ext/player/toggle_var",
-     "me_core_module:core/ext/player/toggle_var"),
-    ("me_core_module:core/internal/ext/world/count_near",
-     "me_core_module:core/ext/world/count_near"),
-]
+# Caller-side rewrites. Empty: core internals are the shared surface now.
+CROSS_MODULE_REWRITES: list[tuple[str, str]] = []
+
+# Public ids of a feature that are really the shared implementation behind it.
+#
+# `api/store/render` is not store's private business: core's tui renderer and the
+# store module's own template pass both call it, so it is infrastructure. Same for
+# `api/cmd/other/multi_cmd/run` (every multi_cmd variant is a thin front-end over
+# it) and `api/player/init` (the relay that resolves a name into a player).
+#
+# Leaving them in a feature pack makes core depend on that pack - the
+# `core -> store -> core` cycle - and makes the module unremovable, which is the
+# property the whole split exists to provide. So they move to core and the module
+# keeps thin public functions of its own that call the core id.
+# Keyed by the source path after `api/` and `systems/` are dropped, which is what
+# the module id is built from. Two source paths can normalise to the same key -
+# `api/player/init` and `player/init` both become `player/init` - and the public id
+# the world calls is the same either way, so one key covers both.
+CORE_FORWARDED = {
+    ("store", "store/render"): "core/internal/store/render",
+    ("cmd", "cmd/other/multi_cmd/run"): "core/internal/cmd/other/multi_cmd/run",
+    ("player", "player/init"): "core/internal/player/init",
+}
+
+def core_forwarded_owner(old_id: str) -> str:
+    """Which module owns the public id `old_id` had, e.g. `store` for store/render."""
+    area = old_id.split(":", 1)[1]
+    for (module, src) in CORE_FORWARDED:
+        if normalise_area(area) == src:
+            return module
+    raise KeyError(old_id)
 
 # Ids whose *source function* is relocated rather than wrapped. A wrapper is right
 # for a primitive the module never intended to publish (it can stay private and the
 # wrapper is the only door). These are different: the function itself becomes part
 # of the public surface, so the file moves and the private path disappears.
-MOVED_TO_PUBLIC = {
-    "me_container_module:core/internal/container/slot_set_do",
-    "me_container_module:core/internal/container/slot_get_do",
-    "me_container_module:core/internal/container/slot_clear_do",
-    "me_container_module:core/internal/container/_src_first",
-    "me_trigger_module:core/internal/trigger/call",
-    "me_trigger_module:core/internal/trigger/call2",
-    "me_core_module:core/internal/text/replace",
-    "me_core_module:core/internal/text/lower",
-    "me_core_module:core/internal/text/reset",
-    "me_core_module:core/internal/text/split",
-    "me_core_module:core/internal/text/concat",
-    "me_core_module:core/internal/text/safe",
-    "me_core_module:core/internal/text/ctl",
-    "me_core_module:core/internal/ext/perm_count",
-    "me_core_module:core/internal/ext/player/add_var_clamped",
-    "me_core_module:core/internal/ext/player/toggle_var",
-    "me_core_module:core/internal/ext/world/count_near",
-    "me_core_module:core/internal/text/num_check",
-    "me_core_module:core/internal/text/scan_deny",
-    "me_core_module:core/internal/ext/input/int_to_score",
-    "me_player_module:core/internal/player/init_from_name",
-}
+MOVED_TO_PUBLIC: set[str] = set()
+
 
 # Id → destination path, for the moved ones. Derived from CROSS_MODULE_REWRITES so
 # the two cannot disagree.
@@ -389,6 +330,19 @@ def _is_within(child: Path, parent: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+def hook_target(module: str, function: str) -> str:
+    """The id a hook slot lists for `function`.
+
+    A contribution under `core/internal/` is not the module's file - internals
+    live in core - so the tag must name `me_core_module`. A contribution to the
+    module's public surface keeps the module's namespace.
+    """
+    normalised = normalise_area(function)
+    if normalised.startswith("core/internal/"):
+        return f"me_core_module:{normalised}"
+    return f"{module_namespace(module)}:{normalised}"
 
 
 def module_namespace(module: str) -> str:
@@ -519,6 +473,7 @@ class Split:
         self.mapping: dict[str, str] = {}
         self.assigned: dict[str, str] = {}
         self.assigned_area: dict[str, str] = {}
+        self.forwarded_from: dict[str, str] = {}
         self.unmapped: list[str] = []
         self.files: list[tuple[Path, str, str]] = []
         self.macros: list[str] = []
@@ -547,6 +502,19 @@ class Split:
                 # at the old namespace.
                 area = area.split("/", 1)[1] if "/" in area else area
             module = assign_module(area)
+            # Shared implementation behind a feature's public surface: it lives in
+            # core, and the feature keeps a thin public function of its own that
+            # forwards to it. Keyed by the original id so the table is readable
+            # against the source pack, not against post-normalisation paths.
+            forwarded = CORE_FORWARDED.get(
+                (module, normalise_area(area)))
+            if forwarded is not None:
+                module = "core"
+                self.assigned[f"{OLD_NAMESPACE}:{area}"] = module
+                self.assigned_area[f"{OLD_NAMESPACE}:{area}"] = forwarded
+                self.forwarded_from[f"{OLD_NAMESPACE}:{area}"] = forwarded
+                self.files.append((path, module, rel))
+                continue
             # The mapping key is the *original* id (that is what the source pack
             # contains); the value is the module namespace plus the normalised area.
             self.assigned[f"{OLD_NAMESPACE}:{area}"] = module
@@ -657,6 +625,16 @@ class Split:
             moved = MOVED_DEST.get(self._normalised_id(module, rel))
             if moved:
                 dest_area = f"function/{moved}.mcfunction"
+            elif rel.startswith("function/"):
+                # A forwarded function is written where its new id says it lives,
+                # not where its source path points. The source is
+                # `function/api/store/render.mcfunction`; after the move the id is
+                # `core/internal/store/render`, so that is the only path the game
+                # will ever look at.
+                forwarded = self.forwarded_from.get(
+                    f"{OLD_NAMESPACE}:{self._source_area(rel)}")
+                if forwarded:
+                    dest_area = f"function/{forwarded}.mcfunction"
             dest = (self.out / "packs" / module_namespace(module) / "data"
                     / module_namespace(module) / dest_area)
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -698,6 +676,7 @@ class Split:
 
         self._write_hook_tags()
         self._write_published()
+        self._write_forwarders()
         self._write_pack_metas()
         self._write_manifests()
 
@@ -712,9 +691,10 @@ class Split:
     # ------------------------------------------------------------------
     def _core_hook_rewrite(self, text: str) -> str:
         for slot, module, function in HOOK_CONTRIBUTIONS:
-            # The module's file is written at its *normalised* path (`perm/require`,
-            # not `api/perm/require`), so the pattern has to match that id.
-            target = f"{module_namespace(module)}:{normalise_area(function)}"
+            # The file is written at its *normalised* path (`perm/require`, not
+            # `api/perm/require`), and an internal one under core's namespace
+            # because that is where it is written.
+            target = hook_target(module, function)
             pattern = rf"function {re.escape(target)}{HOOK_CALL_SUFFIX}"
             text = re.sub(pattern, f"function #me_core_module:hook/{slot}", text)
         return text
@@ -735,24 +715,29 @@ class Split:
         return f"{module_namespace(module)}:{normalise_area(self._source_area(rel))}"
 
     def _cross_module_rewrite(self, text: str, module: str) -> str:
-        """Point a module at another module's *published* id, never its internals.
+        """Point every internal call at core, which is where internals now live.
 
-        The owner of a tree keeps its own private ids: within `me_container_module`
-        `core/internal/container/_addr` is a private helper and its name is its own
-        business. Only the outside sees the published name.
+        A module keeps no private tree of its own, so any `me_<anything>:core/
+        internal/...` id inside a module is a call into core's implementation and
+        must carry core's namespace. The module's own name on a core/internal id
+        is what produced the reported bug: `me_cb_module` shipped a
+        `core/internal/cb/` tree and called itself.
+
+        Two exceptions, both about the module's *public* surface:
+
+        * its own non-internal ids (`me_cb_module:cb/run`) stay as they are;
+        * a published id (`me_container_module:container/addr`) is a public
+          contract and stays in the owner's namespace.
         """
+        # 1. Published primitives: private id -> public id, whoever wrote the call.
         for private_id, public_id in CROSS_MODULE_REWRITES:
-            owner = private_id.split(":", 1)[0][len("me_"):-len("_module")]
-            if owner == module:
-                # The owner moves the function itself: an id that is public for
-                # the outside must not stay under core/internal inside the pack,
-                # or the file the game loads and the id callers use disagree.
-                if private_id in MOVED_TO_PUBLIC:
-                    text = re.sub(rf"{re.escape(private_id)}{HOOK_CALL_SUFFIX}",
-                                  public_id, text)
-                continue
-            text = re.sub(rf"{re.escape(private_id)}{HOOK_CALL_SUFFIX}",
-                          public_id, text)
+            text = re.sub(rf"{re.escape(private_id)}{HOOK_CALL_SUFFIX}", public_id, text)
+
+        # 2. Any remaining `<me_x_module>:core/internal/...` -> core's id. This
+        #    covers the module's own internals, which no longer exist as files in
+        #    that module, and any cross-module reach the table above missed.
+        text = re.sub(rf"me_[a-z0-9_]+_module(?=:core/internal/)",
+                      "me_core_module", text)
         return text
 
     def _write_published(self) -> None:
@@ -774,13 +759,38 @@ class Split:
                 f"# PUBLISHED SURFACE - part of this module's public contract.\n"
                 f"# {contract}\n"
                 f"#\n"
-                f"# Thin wrapper over the private implementation; it adds no logic, so the\n"
-                f"# private function keeps its freedom to change. Callers outside this\n"
-                f"# module must use this id and never {ns}:{source_id}.\n"
+                f"# Thin wrapper over the implementation, which lives in core; it adds no\n"
+                f"# logic, so the implementation keeps its freedom to change. Callers\n"
+                f"# outside this module must use this id and never the core internal.\n"
                 f"\n"
-                f"return run function {ns}:{source_id}\n"
+                f"return run function me_core_module:{source_id}\n"
             )
             dest.write_text(body, encoding="utf-8")
+
+    def _write_forwarders(self) -> None:
+        """Keep the module's public id working after its body moved to core.
+
+        `api/store/render` is a published entry point - worlds call it - so the id
+        must survive the split even though the function now lives in core. The
+        module keeps a file at its own id that forwards.
+        """
+        for old_id, core_area in self.forwarded_from.items():
+            module = core_forwarded_owner(old_id)
+            public = normalise_area(old_id.split(":", 1)[1])
+            ns = module_namespace(module)
+            dest = (self.out / "packs" / ns / "data" / ns / "function"
+                    / f"{public}.mcfunction")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(
+                f"# {ns}:{public}\n"
+                f"# ─────────────────────────────────────────────────────────────────\n"
+                f"# Public entry point. The implementation lives in core, because it is\n"
+                f"# shared: core itself calls it, so it cannot belong to this module.\n"
+                f"# This file exists so the id that worlds already call keeps working.\n"
+                f"# ─────────────────────────────────────────────────────────────────\n"
+                f"\n"
+                f"return run function me_core_module:{core_area}\n",
+                encoding="utf-8")
 
     def _write_hook_tags(self) -> None:
         """Emit one slot tag per hook, plus each module's contribution file.
@@ -796,7 +806,7 @@ class Split:
         for slot, module, function in HOOK_CONTRIBUTIONS:
             slots.setdefault(slot, [])
             contributors.setdefault(module, {}).setdefault(slot, []).append(
-                f"{module_namespace(module)}:{normalise_area(function)}")
+                hook_target(module, function))
 
         # Core side: the slot definitions. Every value is `required:false` so an
         # absent module never breaks the core's tag load.
@@ -916,7 +926,7 @@ class Split:
         hooks_by_module: dict[str, dict[str, list[str]]] = {}
         for slot, module, function in HOOK_CONTRIBUTIONS:
             hooks_by_module.setdefault(module, {}).setdefault(slot, []).append(
-                f"{module_namespace(module)}:{normalise_area(function)}")
+                hook_target(module, function))
 
         modules = []
         for name, _ in MODULES:

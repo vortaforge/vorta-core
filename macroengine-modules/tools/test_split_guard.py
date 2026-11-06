@@ -167,5 +167,46 @@ def _run_all() -> int:
     return 1 if failures else 0
 
 
+
+def test_no_module_owns_an_internal_tree():
+    """No entry in MODULES except core may claim a `core/internal/` path.
+
+    The user reported this twice: modules shipped their own
+    `data/me_<x>_module/function/core/internal/...` copy, which reads like core's
+    tree but is private to the module and discarded with it. Internals belong to
+    core; a module calls `me_core_module:core/internal/...`.
+
+    This is the cheap structural half. The expensive half - looking at the packs
+    that were actually written - is `verify.py --check module-internal`, which
+    runs in CI on every split.
+    """
+    from split import MODULES
+
+    offenders = []
+    for module, prefixes in MODULES:
+        if module == "core":
+            continue
+        for prefix in prefixes:
+            if "internal" in prefix.split("/"):
+                offenders.append((module, prefix))
+    assert not offenders, (
+        "these MODULES entries claim a core internal tree: "
+        + ", ".join(f"{m}: {p}" for m, p in offenders)
+    )
+
+
+def test_core_claims_all_of_core_internal():
+    """And core must claim the whole tree, or files fall through to a module."""
+    from split import assign_module
+
+    for area in ("core/internal/cb/apply_defaults",
+                 "core/internal/store/render",
+                 "core/internal/player/init",
+                 "core/internal/hook/fire",
+                 "core/internal/anything/at/all"):
+        assert assign_module(area) == "core", f"{area} -> {assign_module(area)}"
+
+
 if __name__ == "__main__":
     raise SystemExit(_run_all())
+

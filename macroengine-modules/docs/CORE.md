@@ -87,16 +87,43 @@ do not change:
 | `me_core_module:core/ext/player/toggle_var` | flip a player variable |
 | `me_core_module:core/ext/world/count_near` | count nearby entities |
 
-Nothing under `core/internal/...` is part of the contract. If a module looks there,
-`verify.py` fails the build — deliberately: the freedom to change that tree exists
-only while nobody leans on it.
+### `core/internal/` is where every implementation lives
+
+This is the load-bearing rule of the whole split, and it is the one that took two
+attempts to get right:
+
+> **Every function that implements something lives in `me_core_module`, under
+> `core/internal/`. A module ships its public surface and nothing else.**
+
+A module *does* call `me_core_module:core/internal/...` — that is the normal,
+intended case, not a violation. There is one implementation of a feature, it is in
+core, and every caller reaches it by fully-qualified id.
+
+What must never happen is a module shipping its own copy:
+
+```
+data/me_cb_module/function/core/internal/cb/apply_defaults.mcfunction   ← wrong
+```
+
+That path reads like core's tree, resolves like a real id, and passes a reference
+check — but it is private to `me_cb_module`, it is a second copy of core code, and
+deleting the module silently deletes it. `verify.py` reports it as
+`module-internal` and fails the build. `test_split_guard.py` also refuses a
+`MODULES` table in which anything but core claims a `core/internal/` prefix, so the
+generator cannot produce the shape in the first place.
+
+Three functions are shared by core and a module (the store renderer, the multi_cmd
+executor, the player initialiser). Those are infrastructure, so they live in core;
+the feature keeps a thin public function at its own id that forwards to them.
 
 ## 4. What a module is expected to do
 
 1. Namespace `me_<name>_module`, ids `me_<name>_module:<path>`; no `api/` or
    `systems/` segment (the naming rule `split.py` applies).
-2. No reaching into another module's `core/internal` tree. If you need it, that
-   module **publishes** the function and you call the published id.
+2. No implementation of your own. Your pack contains your public functions; the
+   code behind them is `me_core_module:core/internal/<area>/...` and you call it by
+   id. Reaching into *another module's* namespace is still forbidden - modules
+   never call each other's public surface either, they both call core.
 3. `min_format`/`max_format` in `pack.mcmeta` (the form 26.x reads).
 4. To join a hook, write
    `data/me_core_module/tags/function/hook/<slot>.json` in your own pack — do not
@@ -108,7 +135,8 @@ only while nobody leans on it.
 
 - unresolvable function/tag references (`dangling`)
 - a real call still pointing at the old `macroengine:` namespace (`old-namespace`)
-- a module accessing another module's internal tree (`private-access`)
+- a module shipping a `core/internal/` tree of its own (`module-internal`)
+- a module calling another module (`private-access`)
 - the core calling a module by name (`hooks`)
 - a cycle in the module dependency graph (`cycle`)
 - a missing `pack.mcmeta` or an empty pack (`pack-layout`)
