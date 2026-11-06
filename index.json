@@ -1,6 +1,6 @@
 {
   "org": "vortaforge",
-  "generatedAt": "2026-11-06T17:49:43.259069Z",
+  "generatedAt": "2026-11-06T17:52:15.841499Z",
   "count": 6,
   "repositories": [
     {
@@ -73,6 +73,21 @@
       "hasIssues": true
     },
     {
+      "name": "sync-demo-repo",
+      "fullName": "vortaforge/sync-demo-repo",
+      "description": "Round-trip test: created via API to prove vorta-core records it",
+      "visibility": "PUBLIC",
+      "archived": false,
+      "fork": false,
+      "defaultBranch": "",
+      "createdAt": "2026-11-06T17:51:05Z",
+      "pushedAt": "2026-11-06T17:51:06Z",
+      "language": null,
+      "topics": [],
+      "stars": 0,
+      "hasIssues": true
+    },
+    {
       "name": "vorta-core",
       "fullName": "vortaforge/vorta-core",
       "description": "",
@@ -81,23 +96,8 @@
       "fork": false,
       "defaultBranch": "main",
       "createdAt": "2026-11-06T17:17:52Z",
-      "pushedAt": "2026-11-06T17:49:30Z",
+      "pushedAt": "2026-11-06T17:52:04Z",
       "language": "Python",
-      "topics": [],
-      "stars": 0,
-      "hasIssues": true
-    },
-    {
-      "name": "vorta-core-synctest",
-      "fullName": "vortaforge/vorta-core-synctest",
-      "description": "temporary: tests vorta-core deletion detection",
-      "visibility": "PUBLIC",
-      "archived": true,
-      "fork": false,
-      "defaultBranch": "",
-      "createdAt": "2026-11-06T17:37:30Z",
-      "pushedAt": "2026-11-06T17:37:32Z",
-      "language": null,
       "topics": [],
       "stars": 0,
       "hasIssues": true
