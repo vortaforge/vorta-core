@@ -260,5 +260,38 @@ def test_unchanged_listing_keeps_generated_at():
     assert after["generatedAt"] == "2026-01-01T00:00:00Z", after["generatedAt"]
 
 
+def test_pushed_at_is_not_persisted():
+    """index.json must not hold a field that changes on its own pushes.
+
+    `pushedAt` moves whenever this sync pushes its own commit, so persisting it
+    made every successful run write a different index - the loop the mirror was
+    already freed from. The commit sha in each .mirror.json is what says which
+    tree was captured.
+    """
+    from pathlib import Path as _Path
+    import tempfile as _tempfile
+
+    work = _Path(_tempfile.mkdtemp())
+    index = work / "index.json"
+    index.write_text(json.dumps({"org": "vortaforge", "count": 0,
+                                 "repositories": []}), encoding="utf-8")
+
+    import sync as sync_module  # noqa: PLC0415
+
+    original = sync_module.discover
+    sync_module.discover = lambda org, include_archived: [
+        {**repo("kept"), "pushedAt": "2026-11-06T18:00:00Z"}]
+    try:
+        assert sync_module.main(["--org", "vortaforge", "--apply",
+                                 "--index", str(index),
+                                 "--ledger", str(work / "events.log")]) == 0
+    finally:
+        sync_module.discover = original
+
+    after = json.loads(index.read_text(encoding="utf-8"))
+    assert "pushedAt" not in after["repositories"][0]
+    assert after["repositories"][0]["name"] == "kept"
+
+
 if __name__ == "__main__":
     raise SystemExit(_run_all())

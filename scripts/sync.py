@@ -211,7 +211,16 @@ def main(argv: list[str]) -> int:
         # record of the trees it had already written.
         out = {k: v for k, v in index.items() if k not in {
             "org", "generatedAt", "count", "repositories"}}
-        repositories = [by_name[n] for n in sorted(by_name, key=str.lower)]
+        # `pushedAt` is not state this repository can hold. It changes whenever
+        # anyone pushes to a mirrored repository - including this sync pushing its
+        # own previous commit - so storing it means index.json differs after every
+        # successful run and the sync commits forever. It is still fetched (the
+        # event stream uses it) but it is not persisted: the commit sha in each
+        # .mirror.json already says what was captured.
+        repositories = [
+            {k: v for k, v in by_name[n].items() if k != "pushedAt"}
+            for n in sorted(by_name, key=str.lower)
+        ]
         # `generatedAt` is a clock, and a clock in a committed file means a commit
         # every six hours whose only content is the time. It is kept from the
         # previous run unless something a reader would care about moved.
