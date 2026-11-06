@@ -31,6 +31,18 @@ from pathlib import Path
 DEFAULT_DIST = Path("build/dist")
 
 
+def class_in_nested(archive: zipfile.ZipFile, entry: str, path: str) -> bool:
+    """True when `path` is inside the nested jar `entry`."""
+    import io
+
+    try:
+        raw = archive.read(entry)
+        with zipfile.ZipFile(io.BytesIO(raw)) as inner:
+            return path in inner.namelist()
+    except (KeyError, zipfile.BadZipFile):
+        return False
+
+
 def problems_for(jar: Path) -> list[str]:
     found: list[str] = []
     with zipfile.ZipFile(jar) as archive:
@@ -56,17 +68,33 @@ def problems_for(jar: Path) -> list[str]:
             found.append(f"{jar.name}: mod id `{mod_id}` is not a valid Fabric id "
                          f"(lowercase letters, digits, - and _ only)")
 
-        # The declared entry point must be a class that is actually in the jar.
+        # The declared entry point must be a class that is actually loadable.
         # Fabric aborts the launch when it is not, so this is the check that
         # decides whether the game starts at all.
+        #
+        # The class may be in the jar itself or in a nested jar under
+        # META-INF/jars/ - Fabric extracts those and loads them, which is how one
+        # shared entry point serves all 26 mods. Both are checked, because the
+        # failure mode is identical either way.
         entrypoints = meta.get("entrypoints", {}).get("main", [])
         if not entrypoints:
             found.append(f"{jar.name}: no `main` entrypoint")
+        nested = [n for n in names if n.startswith("META-INF/jars/") and n.endswith(".jar")]
         for entry in entrypoints:
             path = entry.replace(".", "/") + ".class"
-            if path not in names:
-                found.append(f"{jar.name}: entry point {entry} is declared but "
-                             f"{path} is not in the jar")
+            if path in names:
+                continue
+            if any(class_in_nested(archive, n, path) for n in nested):
+                continue
+            found.append(
+                f"{jar.name}: entry point {entry} is declared but {path} is in "
+                f"neither the jar nor any of its {len(nested)} nested jar(s)")
+
+        # A nested jar is only useful to Fabric if it is a real jar with the class
+        # in it; an empty META-INF/jars/ entry looks correct and does nothing.
+        if not nested:
+            found.append(f"{jar.name}: no META-INF/jars/ - the declared entry point "
+                         f"cannot be resolved unless the class is in this jar")
 
         # A mod without its data is a mod that does nothing.
         if "pack.mcmeta" not in names:
@@ -158,6 +186,43 @@ def main(argv: list[str]) -> int:
             problems.append(f"{jar.name}: does not declare a dependency on "
                             f"macroengine-core, but its functions call "
                             f"me_core_module:core/internal/...")
+
+    # The bug this whole file exists for, in its second form: a class that exists,
+    # is named correctly, and does not implement ModInitializer. Fabric loads it,
+    # fails the cast, and refuses to start the server. Checking the constant pool
+    # of the class file catches that without running a game.
+    for jar in jars:
+        try:
+            with zipfile.ZipFile(jar) as archive:
+                meta = json.loads(archive.read("fabric.mod.json"))
+        except (KeyError, zipfile.JSONDecodeError, json.JSONDecodeError):
+            continue
+        for entry in meta.get("entrypoints", {}).get("main", []):
+            path = entry.replace(".", "/") + ".class"
+            data = None
+            with zipfile.ZipFile(jar) as archive:
+                if path in archive.namelist():
+                    data = archive.read(path)
+                else:
+                    import io
+                    for nested in [n for n in archive.namelist()
+                                   if n.startswith("META-INF/jars/")]:
+                        try:
+                            with zipfile.ZipFile(io.BytesIO(archive.read(nested))) as inner:
+                                if path in inner.namelist():
+                                    data = inner.read(path)
+                                    break
+                        except zipfile.BadZipFile:
+                            continue
+            if data is None:
+                continue
+            # The interface's name is in the class file's constant pool whether it
+            # is implemented directly or through a superclass.
+            if b"net/fabricmc/api/ModInitializer" not in data:
+                problems.append(
+                    f"{jar.name}: entry point {entry} does not implement "
+                    f"net.fabricmc.api.ModInitializer - Fabric will fail the cast "
+                    f"and refuse to start the server")
 
     if problems:
         for problem in problems:

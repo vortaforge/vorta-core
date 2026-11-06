@@ -1,0 +1,3 @@
+// Standalone build: the root build's sub-projects are the generated packs, so the
+// bootstrap compiles in its own build and hands its jar to the root build.
+rootProject.name = 'macroengine-bootstrap'

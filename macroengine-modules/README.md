@@ -81,16 +81,43 @@ Every jar is a **Fabric mod**, not a bare data pack:
 
 ```
 me_cb_module-1.0.0.jar
-├── fabric.mod.json                           mod manifest, id `macroengine-cb`
-├── com/vortaforge/macroengine/.../Entry.class  entry point the manifest names
-├── pack.mcmeta                               data pack manifest (format 121)
-└── data/me_cb_module/...                     the pack itself
+├── fabric.mod.json                  mod manifest, id `macroengine-cb`
+├── META-INF/jars/
+│   └── macroengine-bootstrap.jar    the entry point, nested
+├── pack.mcmeta                      data pack manifest (format 121)
+└── data/me_cb_module/...            the pack itself
 ```
 
-Install it by dropping it into the world's or profile's `mods/` folder. Fabric
-reads the `data/` tree from inside the jar, which is the same layout the game uses
-for a `datapacks/` folder — so the same file also works there, with no mod loader
-at all.
+Install it by dropping it into the world's or profile's `mods/` folder.
+
+**Fabric API is required.** The mod jar's `data/` tree is read by
+`fabric-resource-loader`, which ships in Fabric API, not in the loader — this is
+declared in every manifest's `depends`, so a missing Fabric API stops the game
+with a readable message instead of loading 26 mods that silently do nothing.
+
+The dependency names `fabric-api`, the umbrella id, not a specific module. The
+module is `fabric-resource-loader-v0` as of Fabric API `0.165.2+26.3` (there is
+also a `-v1`), and pinning a module name ties this project to something Fabric API
+is free to retire.
+
+The `data/` layout is identical to a `datapacks/` folder, so the same jar also
+works there, with no mod loader at all.
+
+### The entry point
+
+All 26 mods declare the same class,
+`com.vortaforge.macroengine.runtime.MacroEngineEntry`, and that class lives in one
+tiny jar nested inside each of them. It implements `net.fabricmc.api.ModInitializer`
+and does nothing.
+
+It has to implement the interface. A class that merely *exists* is not enough:
+Fabric constructs the declared class and casts it, and a class that does not
+implement `ModInitializer` fails the cast and stops the entire server, not just
+that mod. That is a real failure this project shipped once.
+
+One shared class rather than one per module, because 26 identical classes is 26
+copies for a classloader to disambiguate, and a module jar is supposed to be
+removable.
 
 `fabric.mod.json` is generated twice, deliberately: `tools/split.py` writes one so
 a pack directory is a valid mod source on its own, and `renderFabricMeta` in
