@@ -1,0 +1,68 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+	// Add repositories to retrieve artifacts from in here.
+	// You should only use this when depending on other mods because
+	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
+	// for more information about repositories.
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"template-mod" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API. This is technically optional, but you probably want it anyway.
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
+
+// processResources' fabric.mod.json version expansion, withSourcesJar(), and
+// the mavenJava publication (published under project.archivesBaseName,
+// which with no base.archivesName override here is just project.name -
+// same as before this file had no publishing{} block's artifactId set
+// either) are identical across mods/ - see build-logic/shared-fabric-mod.gradle
+// for what this pulls in and why it's `apply from:` rather than a
+// precompiled plugin. A projectDir-relative path is used (not ${rootDir})
+// so this also resolves correctly if this mod is ever built standalone via
+// its own settings.gradle, where rootDir would point here instead of at
+// vortaforge/core's root.
+apply from: "${projectDir}/../../build-logic/shared-fabric-mod.gradle"

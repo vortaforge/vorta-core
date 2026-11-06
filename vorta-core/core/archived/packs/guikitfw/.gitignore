@@ -1,0 +1,13 @@
+.DS_Store
+*.zip
+.idea/
+.vscode/
+*.log
+*.patch
+*.pyc
+.minecraft/
+.tlauncher/
+node_modules/
+servers.dat
+servers.dat_old
+/server-resource-packs/

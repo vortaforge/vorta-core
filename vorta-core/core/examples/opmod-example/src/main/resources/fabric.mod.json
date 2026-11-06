@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "levelop",
+	"version": "${version}",
+
+	"name": "LevelOp",
+	"description": "Adds a permission-level argument to the /op command.",
+	"authors": [
+		"you"
+	],
+	"contact": {},
+
+	"license": "Unlicense",
+
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.example.opmod.LevelOpMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

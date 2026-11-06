@@ -1,0 +1,9 @@
+{
+  "entity": "this",
+  "predicate": {
+    "effects": {
+      "minecraft:saturation": {}
+    }
+  },
+  "type": "minecraft:entity_properties"
+}

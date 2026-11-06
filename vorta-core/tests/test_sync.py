@@ -183,5 +183,49 @@ def _run_all() -> int:
     return 1 if failures else 0
 
 
+
+
+def test_apply_preserves_keys_owned_by_other_scripts():
+    """mirror.py stores its state under `mirrors` in the same document.
+
+    Rebuilding index.json from a literal dict dropped that key, so the next
+    mirror run found no record of the trees it had written. The document has two
+    writers; neither may delete the other's section.
+    """
+    import subprocess
+    import tempfile as _tempfile
+    from pathlib import Path as _Path
+
+    work = _Path(_tempfile.mkdtemp())
+    index = work / "index.json"
+    index.write_text(json.dumps({
+        "org": "vortaforge",
+        "count": 1,
+        "repositories": [repo("kept")],
+        "mirrors": {"kept": {"branch": "main", "commit": "abc123"}},
+        "mirrorsGeneratedAt": "2026-01-01T00:00:00Z",
+    }), encoding="utf-8")
+
+    # Drive exactly the rewrite branch, without a network call: run the same
+    # code path by importing main under a stubbed discover.
+    sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "scripts"))
+    import sync as sync_module  # noqa: PLC0415
+
+    original = sync_module.discover
+    sync_module.discover = lambda org, include_archived: [repo("kept")]
+    try:
+        assert sync_module.main(["--org", "vortaforge", "--apply",
+                                 "--index", str(index),
+                                 "--ledger", str(work / "events.log")]) == 0
+    finally:
+        sync_module.discover = original
+
+    after = json.loads(index.read_text(encoding="utf-8"))
+    assert after["mirrors"] == {"kept": {"branch": "main", "commit": "abc123"}}
+    assert after["mirrorsGeneratedAt"] == "2026-01-01T00:00:00Z"
+    assert after["org"] == "vortaforge"
+    assert [r["name"] for r in after["repositories"]] == ["kept"]
+
+
 if __name__ == "__main__":
     raise SystemExit(_run_all())

@@ -27,7 +27,10 @@ from collections import defaultdict
 from pathlib import Path
 
 OLD_NAMESPACE = "macroengine"
-NS_RE = re.compile(r"^me_([a-z0-9]+)_module$")
+# Module names may contain an underscore: `me_rate_limit_module`. The original
+# pattern required `[a-z0-9]+`, so any name with an underscore in it failed the
+# namespace check for a reason that had nothing to do with the namespace.
+NS_RE = re.compile(r"^me_([a-z0-9][a-z0-9_]*[a-z0-9]|[a-z0-9])_module$")
 # `#` is captured, not skipped: `function #x:y` names a tag, and tags live in a
 # different folder from functions. Dropping it made every tag reference look like a
 # dangling function reference.

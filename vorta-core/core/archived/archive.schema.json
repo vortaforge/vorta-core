@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/vortaforge/core/blob/main/archived/archive.schema.json",
+  "title": "vortaforge/core archive registry (v2)",
+  "description": "Registry of every frozen project in archived/. schema_version 2 adds the hard-disable fields (disarmed, is_datapack, quality_score, pack_format, description, last_commit, original_path). Consumers MUST treat an entry as disabled unless disarmed is false, and they MUST treat a missing disarmed field as true so that a v1 registry cannot accidentally re-enable archived code.",
+  "type": "object",
+  "required": ["schema_version", "projects"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "updated_on": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Date the registry was last edited." },
+    "summary": { "type": "string", "description": "One-paragraph human summary of what this registry means." },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "status", "archived_on", "reason", "last_version", "license", "deploy", "successor"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "description": "Stable identifier. Also the name of archived/patches/<id>/ when the entry has patches."
+          },
+          "name": { "type": "string" },
+          "kind": { "enum": ["datapack", "mod", "resourcepack", "script", "other"] },
+          "status": { "enum": ["archived", "frozen", "superseded"] },
+          "archived_on": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "reason": { "type": "string", "minLength": 1, "description": "Why the project was retired. Required. A retirement always has a reason." },
+          "last_version": { "type": "string" },
+          "minecraft": { "type": "string", "description": "Minecraft version range the project last targeted, free text." },
+          "license": { "type": "string" },
+          "deploy": { "enum": ["not_recommended", "review_required", "ok"] },
+          "path": { "type": ["string", "null"], "description": "Path inside this repo, null if the code is not kept here. MUST start with archived/ when set." },
+          "original_path": { "type": ["string", "null"], "description": "Where the project lived before it was archived, e.g. packs/guikitfw." },
+          "source_url": { "type": ["string", "null"] },
+          "successor": { "type": ["string", "null"] },
+          "disarmed": { "type": "boolean", "description": "true = hard-disabled: the build, CI and packaging must ignore this project. Absent is treated as true." },
+          "is_datapack": { "type": "boolean", "description": "true for anything that is, generates, lints, tests or serves datapacks. Every such entry must be disarmed." },
+          "quality_score": { "type": ["number", "null"], "description": "Review score, when recorded. Low scores are a documented reason for retirement." },
+          "pack_format": { "type": ["string", "null"], "description": "pack.mcmeta pack_format / min_format / max_format at archival time, as text." },
+          "description": { "type": "string", "description": "What the project did, in one line." },
+          "last_commit": { "type": "string", "description": "Last commit date and author recorded at archival time." },
+          "known_issues": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

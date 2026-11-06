@@ -1,0 +1,174 @@
+# .github/workflows/backup-org.yml
+#
+# Runs scripts/ops/backup-org.sh on a GitHub-hosted runner and uploads the
+# resulting archive as a workflow artifact. Entirely non-interactive - the
+# script is the same one used locally, driven here through environment
+# variables instead of prompts (see ARCHIVE_PASSWORD below).
+#
+# Required repo secrets:
+#   ORG_READ_TOKEN        Fine-grained PAT or GitHub App token. The name is
+#                          shared with the CODEOWNERS Sync workflow, but the
+#                          scopes are NOT: that workflow only reads org
+#                          members, while this one also reads repository
+#                          contents, metadata, teams and team membership,
+#                          security events (Dependabot / secret scanning) and
+#                          Actions data. A token scoped for CODEOWNERS Sync
+#                          will authenticate here and then produce a backup
+#                          that is silently missing most of its sections -
+#                          the script reports each gap as a warning, so check
+#                          the warning count in the job summary rather than
+#                          trusting a green run.
+#   BACKUP_ARCHIVE_PASSWORD   Passphrase for the encrypted archive. Required
+#                          whenever `encrypt` (below) is 7z or gpg; leave the
+#                          secret unset only if you intend to always run this
+#                          with encrypt=none.
+#
+# Optional repo/environment variable:
+#   BACKUP_ORG             Organization to back up. Defaults to vortaforge
+#                          (the script's own default) when unset.
+#
+# Manual-trigger only by default, same reasoning as CODEOWNERS Sync's
+# maintenance pause: no unattended token use while the org is quiet. Uncomment
+# the schedule block to back up automatically again.
+name: Organization Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      encrypt:
+        description: "Archive encryption (there is no unencrypted option: the artifact leaves the runner)"
+        type: choice
+        default: gpg
+        options: [gpg, 7z]
+      include_source:
+        description: "Also include plain (non-bare) source checkouts"
+        type: boolean
+        default: false
+  # schedule:
+  #   - cron: "0 4 * * 1" # Weekly, Monday 04:00 UTC
+
+permissions: {}
+
+concurrency:
+  # Never run two backups of the same org at once - github-backup isn't
+  # designed for concurrent runs against one organization.
+  group: backup-org
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    # Named so the run page shows what the job does instead of the bare id.
+    name: Back up organization
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    permissions:
+      contents: read
+
+    env:
+      ORG: ${{ vars.BACKUP_ORG || 'vortaforge' }}
+      ENCRYPT: ${{ inputs.encrypt || 'gpg' }}
+      INCLUDE_SOURCE: ${{ (inputs.include_source && '1') || '0' }}
+      JOBS: "2" # matches the standard ubuntu-latest runner's 2 vCPUs
+      KEEP: "1" # the runner is thrown away after the run; no history to prune
+      # The script refuses ENCRYPT=none when this is set. The artifact below is
+      # downloadable for 14 days, so an unencrypted archive here would expose
+      # private repository contents and organisation metadata.
+      UPLOAD_ARCHIVE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.x"
+
+      # The `runner` context (runner.temp) isn't available in a job-level
+      # `env:` block, only in steps - so OUT_DIR/BACKUP_DIR are derived here
+      # from $RUNNER_TEMP (the equivalent shell env var) and exported via
+      # $GITHUB_ENV for every later step to see.
+      - name: Set work directories
+        run: |
+          set -euo pipefail
+          echo "OUT_DIR=$RUNNER_TEMP/backup-out" >> "$GITHUB_ENV"
+          echo "BACKUP_DIR=$RUNNER_TEMP/backup-work" >> "$GITHUB_ENV"
+
+      - name: Check required secrets
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::ORG_READ_TOKEN secret is missing or empty."
+            exit 1
+          fi
+          if [ -z "${ARCHIVE_PASSWORD:-}" ]; then
+            echo "::error::encrypt=$ENCRYPT needs the BACKUP_ARCHIVE_PASSWORD secret set."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+          ARCHIVE_PASSWORD: ${{ secrets.BACKUP_ARCHIVE_PASSWORD }}
+
+      # Rehearse first. --dry-run exercises argument parsing, the token
+      # pre-flight and every stage's branch selection without writing an
+      # archive, so a broken script fails here in seconds instead of forty
+      # minutes into a real backup. (Until the 2026-10-08 fixes --dry-run
+      # itself aborted on a fresh BACKUP_DIR, so this step would not have
+      # been meaningful before.)
+      - name: Dry run
+        run: bash scripts/ops/backup-org.sh --dry-run --no-source
+        env:
+          GH_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+
+      - name: Run backup
+        run: bash scripts/ops/backup-org.sh
+        env:
+          GH_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+          ARCHIVE_PASSWORD: ${{ secrets.BACKUP_ARCHIVE_PASSWORD }}
+
+      # The checksum file travels INSIDE the artifact, so on its own it only
+      # catches corruption, not tampering. Writing the hash to the run's job
+      # summary stores it somewhere the artifact's contents cannot change.
+      - name: Publish checksum to job summary
+        run: |
+          set -euo pipefail
+          {
+            echo "### Backup checksum (SHA-256)"
+            echo
+            echo '```'
+            cat "$OUT_DIR"/*.sha256
+            echo '```'
+            echo
+            echo "Encryption: \`$ENCRYPT\` | Include source: \`$INCLUDE_SOURCE\`"
+            echo
+            warns="$(grep -c 'WARNING:' "$OUT_DIR"/backup-*.log 2>/dev/null | tail -1 || true)"
+            echo "Warnings during the run: \`${warns:-unknown}\`"
+            echo
+            echo "A non-zero count means sections were skipped (usually a"
+            echo "missing token scope). The archive is still usable, but it is"
+            echo "not a complete backup of the organization."
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Defensive: the input no longer offers `none`, and the script
+          # refuses it under UPLOAD_ARCHIVE=1, but a hand-edited run or a
+          # future input must not be able to upload plaintext.
+          if [ "$ENCRYPT" = none ]; then
+            echo "::error::encrypt=none cannot upload an archive. Refusing to publish plaintext."
+            exit 1
+          fi
+
+      - name: Upload archive
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.ORG }}-backup-${{ github.run_id }}
+          # No bare *.tar.gz: only the encrypted form may be uploaded.
+          path: |
+            ${{ env.OUT_DIR }}/*.tar.gz.gpg
+            ${{ env.OUT_DIR }}/*.7z
+            ${{ env.OUT_DIR }}/*.sha256
+          # Keep for a while on the Actions side too, independent of KEEP
+          # (which only prunes files inside a single, ephemeral runner).
+          retention-days: 14
+          if-no-files-found: error

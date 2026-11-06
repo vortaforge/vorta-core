@@ -1,7 +1,7 @@
 {
   "org": "vortaforge",
-  "generatedAt": "2026-11-06T17:52:15.841499Z",
-  "count": 6,
+  "generatedAt": "2026-11-06T18:20:06.012817Z",
+  "count": 5,
   "repositories": [
     {
       "name": ".github",
@@ -66,23 +66,8 @@
       "fork": false,
       "defaultBranch": "main",
       "createdAt": "2026-11-06T15:47:18Z",
-      "pushedAt": "2026-11-06T17:48:31Z",
+      "pushedAt": "2026-11-06T18:01:54Z",
       "language": "Python",
-      "topics": [],
-      "stars": 0,
-      "hasIssues": true
-    },
-    {
-      "name": "sync-demo-repo",
-      "fullName": "vortaforge/sync-demo-repo",
-      "description": "Round-trip test: created via API to prove vorta-core records it",
-      "visibility": "PUBLIC",
-      "archived": false,
-      "fork": false,
-      "defaultBranch": "",
-      "createdAt": "2026-11-06T17:51:05Z",
-      "pushedAt": "2026-11-06T17:51:06Z",
-      "language": null,
       "topics": [],
       "stars": 0,
       "hasIssues": true
@@ -96,11 +81,49 @@
       "fork": false,
       "defaultBranch": "main",
       "createdAt": "2026-11-06T17:17:52Z",
-      "pushedAt": "2026-11-06T17:52:04Z",
+      "pushedAt": "2026-11-06T17:53:19Z",
       "language": "Python",
       "topics": [],
       "stars": 0,
       "hasIssues": true
     }
-  ]
+  ],
+  "mirrors": {
+    ".github": {
+      "branch": "main",
+      "commit": "080cc786d8c2382dcfaaaab31d0294964b45a56b",
+      "files": 18,
+      "bytes": 139164,
+      "syncedAt": "2026-11-06T18:20:48.331221Z"
+    },
+    "core": {
+      "branch": "main",
+      "commit": "7f8b53479c427f66974c92fe1009149fc5969afa",
+      "files": 5276,
+      "bytes": 9870316,
+      "syncedAt": "2026-11-06T18:20:48.331221Z"
+    },
+    "docs": {
+      "branch": "main",
+      "commit": "ee2dcc7a632afdf046230e280c22a7a5b44c6007",
+      "files": 11,
+      "bytes": 79879,
+      "syncedAt": "2026-11-06T18:20:48.331221Z"
+    },
+    "macroengine-modules": {
+      "branch": "main",
+      "commit": "6bea023d172beebe673234bf7d72554ec4d80a94",
+      "files": 22,
+      "bytes": 199480,
+      "syncedAt": "2026-11-06T18:20:48.331221Z"
+    },
+    "vorta-core": {
+      "branch": "main",
+      "commit": "c63ef38d20609de3e3f1fce40af2e8ac10e1913b",
+      "files": 16,
+      "bytes": 75737,
+      "syncedAt": "2026-11-06T18:20:48.331221Z"
+    }
+  },
+  "mirrorsGeneratedAt": "2026-11-06T18:21:40.167363Z"
 }

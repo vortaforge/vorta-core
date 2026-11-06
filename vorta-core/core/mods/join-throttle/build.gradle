@@ -1,0 +1,56 @@
+plugins {
+    id 'fabric-loom' version '1.15.5'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+// Same JUnit setup as mods/datapack-blocker. Tests only touch the
+// Minecraft-free classes (AttemptLimiter, AddressKeys, ThrottleSettings).
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.12.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+// See build-logic/shared-fabric-mod.gradle (version expansion, sources jar,
+// maven publication, reproducible archives).
+apply from: "${projectDir}/../../build-logic/shared-fabric-mod.gradle"
+
+jar {
+    // base.archivesName, not project.archivesBaseName (removed in Gradle 9).
+    def licenseSuffix = base.archivesName.get()
+    inputs.property "licenseSuffix", licenseSuffix
+    from("LICENSE") {
+        rename { "${it}_${licenseSuffix}" }
+    }
+}

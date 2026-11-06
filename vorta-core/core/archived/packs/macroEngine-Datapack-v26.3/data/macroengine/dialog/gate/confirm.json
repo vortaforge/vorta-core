@@ -1,0 +1,62 @@
+{
+  "type": "minecraft:notice",
+  "title": {
+    "text": "macroEngine — Confirm",
+    "color": "gold",
+    "bold": true
+  },
+  "can_close_with_escape": true,
+  "body": [
+    {
+      "type": "minecraft:plain_message",
+      "width": 320,
+      "contents": [
+        {
+          "text": "Type ",
+          "color": "white"
+        },
+        {
+          "text": "yes",
+          "color": "green",
+          "bold": true
+        },
+        {
+          "text": " to accept or ",
+          "color": "white"
+        },
+        {
+          "text": "no",
+          "color": "red",
+          "bold": true
+        },
+        {
+          "text": " to cancel, in lowercase, nothing else. Anything other than yes or no is rejected by the game and nothing changes.",
+          "color": "white"
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "type": "minecraft:text",
+      "key": "answer",
+      "label": {
+        "text": "yes / no"
+      },
+      "width": 120,
+      "initial": "",
+      "max_length": 3
+    }
+  ],
+  "action": {
+    "label": {
+      "text": "Submit",
+      "color": "green"
+    },
+    "width": 150,
+    "action": {
+      "type": "minecraft:dynamic/run_command",
+      "template": "trigger macroengine.dlg_$(answer) set 1"
+    }
+  }
+}

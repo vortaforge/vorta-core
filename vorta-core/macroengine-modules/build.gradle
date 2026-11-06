@@ -1,0 +1,204 @@
+// =============================================================================
+// macroEngine Modules - root build.gradle
+// =============================================================================
+//
+// This is a *data pack* project, not a Fabric mod project: there is no Loom, no
+// Minecraft dependency and no Java source. What Gradle is here for is
+//
+//   1. packaging  - each module becomes its own .jar containing that module's
+//                   pack.mcmeta + data/, ready to drop into a world's
+//                   datapacks/ folder;
+//   2. versioning - one version string drives every pack.mcmeta, so the core and
+//                   the modules can never claim different versions;
+//   3. verification - `gradlew verify` runs the splitter's own checker, so a
+//      broken cross-module reference fails the build instead of the game.
+//
+// Pack format for 26.3 is 121. That number is in PACK_FORMAT below and nowhere
+// else - `pack.mcmeta` is generated from it, so a version bump is one edit.
+// =============================================================================
+
+plugins {
+    id 'base'
+}
+
+ext {
+    // Data pack format for Minecraft 26.3.
+    packFormat = 121
+    minecraftVersion = '26.3'
+
+    // Single source of truth for the version shown in every pack.mcmeta.
+    modulesVersion = project.findProperty('modules_version') ?: '1.0.0'
+}
+
+// -----------------------------------------------------------------------------
+// Every pack (core included) is packaged the same way, from a shared recipe.
+// -----------------------------------------------------------------------------
+
+subprojects {
+    apply plugin: 'base'
+
+    // The pack directory is named after the project (`me_cmd_module`), and the
+    // namespace inside it is the same string. Keeping the two equal is what lets
+    // `find_pack`-style tooling work without a lookup table.
+    def packName = project.name
+
+    tasks.register('renderPackMeta') {
+        description = "Write ${packName}/pack.mcmeta from the root version settings."
+        group = 'build'
+
+        def metaFile = layout.projectDirectory.file('pack.mcmeta')
+        def fmt = rootProject.ext.packFormat
+        def version = rootProject.ext.modulesVersion
+
+        // Declared as an input so the task re-runs when either changes; otherwise
+        // a version bump would silently keep the old file.
+        inputs.property('packFormat', fmt)
+        inputs.property('modulesVersion', version)
+        outputs.file(metaFile)
+
+        doLast {
+            def description = "${packName} (macroEngine ${version}) - one module of the " +
+                    "macroEngine engine; requires the me_core_module pack."
+            if (packName == 'me_core_module') {
+                description = "macroEngine core ${version} - engine internals, load and " +
+                        "tick. Modules attach to it through data/me_core_module/tags/function/hook."
+            }
+            // 26.x reads `min_format`/`max_format`, each a [major, minor] pair.
+            // `pack_format` + `supported_formats` is the pre-1.21.9 spelling and is
+            // silently ignored here, which would make the game treat the pack as
+            // incompatible on any future bump.
+            metaFile.asFile.text = """{
+  "pack": {
+    "description": ${groovy.json.JsonOutput.toJson(description)},
+    "min_format": [
+      ${fmt},
+      0
+    ],
+    "max_format": [
+      ${fmt},
+      0
+    ]
+  }
+}
+"""
+        }
+    }
+
+    tasks.register('packJar', Jar) {
+        description = "Package ${packName} as a distributable data pack jar."
+        group = 'build'
+        dependsOn 'renderPackMeta'
+
+        archiveBaseName = packName
+        archiveVersion = rootProject.ext.modulesVersion
+        destinationDirectory = rootProject.layout.buildDirectory.dir('dist')
+
+        // The pack root goes at the top of the jar: pack.mcmeta + data/, which is
+        // exactly the layout Minecraft expects inside a datapack zip.
+        from(layout.projectDirectory) {
+            include 'pack.mcmeta'
+            include 'data/**'
+        }
+    }
+
+    tasks.named('assemble') {
+        dependsOn 'packJar'
+    }
+
+    tasks.register('verify') {
+        description = "Check ${packName} resolves: references, boundaries, hook tags."
+        group = 'verification'
+        // Verification is a whole-set property (a module can only be checked
+        // against the modules it calls), so it always runs over every pack.
+        doLast {
+            def script = rootProject.file('tools/verify.py')
+            def python = System.getenv('PYTHON') ?: 'python3'
+            def result = providers.exec {
+                commandLine python, script.absolutePath,
+                        '--pack', rootProject.file('packs').absolutePath
+            }.standardOutput.asText.get()
+            logger.lifecycle(result.trim())
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Whole-project tasks
+// -----------------------------------------------------------------------------
+
+tasks.register('dist') {
+    description = 'Every module jar plus the core jar, in build/dist.'
+    group = 'build'
+    dependsOn subprojects.collect { it.tasks.named('packJar') }
+}
+
+tasks.register('verifyAll') {
+    description = 'Run the cross-pack verifier once and fail the build on any problem.'
+    group = 'verification'
+
+    def script = file('tools/verify.py')
+    def packs = file('packs')
+
+    // The verifier reads pack.mcmeta, which every sub-project's `renderPackMeta`
+    // writes. Without this the two are unordered: Gradle 9 rejects the graph, and
+    // on an older Gradle verification could read a pack whose manifest has not been
+    // generated yet and report a missing pack.mcmeta the build was about to create.
+    dependsOn subprojects.collect { "${it.path}:renderPackMeta" }
+
+    inputs.dir(packs)
+    inputs.file(script)
+    outputs.upToDateWhen { false }
+
+    doLast {
+        if (!packs.isDirectory()) {
+            throw new GradleException(
+                    "No packs in ${packs}. Run: python3 tools/split.py --source <pack> --out . --in-place")
+        }
+        def python = System.getenv('PYTHON') ?: 'python3'
+        def proc = providers.exec {
+            commandLine python, script.absolutePath, '--pack', packs.absolutePath
+            ignoreExitValue = true
+        }
+        def out = proc.standardOutput.asText.get()
+        def err = proc.standardError.asText.get()
+        logger.lifecycle(out.trim())
+        if (proc.result.get().exitValue != 0) {
+            throw new GradleException("verify.py failed:\n${err.trim()}")
+        }
+    }
+}
+
+// The splitter's output guard and the verifier are both load-bearing, so both are
+// part of `check`. A tool that can delete a project root needs a test that runs
+// on every build, not only when someone remembers.
+tasks.register('testTools') {
+    description = 'Run the tool self-tests (splitter output guard).'
+    group = 'verification'
+
+    def guard = file('tools/test_split_guard.py')
+    inputs.file(guard)
+    outputs.upToDateWhen { false }
+
+    doLast {
+        def python = System.getenv('PYTHON') ?: 'python3'
+        def proc = providers.exec {
+            commandLine python, guard.absolutePath
+            ignoreExitValue = true
+        }
+        logger.lifecycle(proc.standardOutput.asText.get().trim())
+        if (proc.result.get().exitValue != 0) {
+            throw new GradleException("tools/test_split_guard.py failed")
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'verifyAll', 'testTools'
+}
+
+// `gradlew` with no arguments builds everything.
+tasks.register('all') {
+    description = 'Split-independent default: build every pack.'
+    group = 'build'
+    dependsOn 'dist'
+}

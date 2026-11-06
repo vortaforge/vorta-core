@@ -1,0 +1,19 @@
+{
+  "item.macroengine.config_key": "Yapılandırma Anahtarı",
+  "item.macroengine.config_key.lore": "macroEngine yardımcı eşyası",
+  "item.macroengine.marker_tag": "İşaret Etiketi",
+  "item.macroengine.marker_tag.lore": "macroEngine yardımcı eşyası",
+  "item.macroengine.repair_kit": "Tamir Kiti",
+  "item.macroengine.repair_kit.lore": "macroEngine yardımcı eşyası",
+  "macroengine.msg.freeze": "Donduruldunuz",
+  "macroengine.msg.no_perm": "— bu izne sahip değilsiniz.",
+  "macroengine.msg.permission_denied": "İzin reddedildi.",
+  "macroengine.msg.unfreeze": "Dondurma kaldırıldı",
+  "macroengine.subtitle.freeze": "Donduruldu",
+  "macroengine.subtitle.perm_denied": "İzin reddedildi",
+  "macroengine.subtitle.unfreeze": "Çözüldü",
+  "macroengine.msg.audit_header": "Denetim kaydı (son 10 girdi)",
+  "macroengine.msg.audit_empty": "Denetim kaydı boş.",
+  "macroengine.msg.audit_cleared": "Denetim kaydı temizlendi.",
+  "macroengine.msg.require_invalid": "Geçersiz yetki adı."
+}

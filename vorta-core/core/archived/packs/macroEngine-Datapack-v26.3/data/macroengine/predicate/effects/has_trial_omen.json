@@ -1,0 +1,9 @@
+{
+  "entity": "this",
+  "predicate": {
+    "effects": {
+      "minecraft:trial_omen": {}
+    }
+  },
+  "type": "minecraft:entity_properties"
+}

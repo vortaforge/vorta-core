@@ -1,0 +1,5 @@
+# Python bytecode and tool caches. This repository has no Python dependencies
+# and nothing here is built, so these are purely local artefacts.
+__pycache__/
+*.py[cod]
+.pytest_cache/

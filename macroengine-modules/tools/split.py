@@ -54,26 +54,87 @@ from pathlib import Path
 # splitting them would build a boundary that points the wrong way - the public
 # function would reach across it into the neighbour's private tree.
 MODULES: list[tuple[str, list[str]]] = [
-    ("core", ["", "core/", "events/", "input/", "gate/", "systems/"]),
-    ("player", ["player/", "core/internal/player/"]),
-    ("world", ["world/", "core/internal/world/"]),
-    ("tui", ["tui/", "core/internal/tui/"]),
-    ("cmd", ["api/cmd/", "core/internal/api/cmd/", "core/internal/cmd/"]),
-    ("store", ["api/store/", "core/internal/api/store/"]),
-    ("wand", ["api/wand/", "core/internal/api/wand/"]),
-    ("perm", ["api/perm/", "core/internal/api/perm/"]),
-    ("title", ["api/title/", "core/internal/api/title/"]),
-    ("block", ["api/block/", "core/internal/api/block/"]),
-    ("item", ["api/item/", "core/internal/api/item/"]),
+    # --- the engine ------------------------------------------------------
+    # Core owns internals, handlers, gates, load and tick. Nothing else.
+    #
+    # `core/internal/<x>/` is deliberately NOT matched by a bare `core/internal/`
+    # prefix: that one entry is what previously pulled every module's private tree
+    # into the core (507 of 1284 functions), leaving modules with no internal of
+    # their own. Each feature area claims its own `core/internal/<area>/` below,
+    # and only the engine areas (api-backed handlers, load, core libs) remain here.
+    ("core", [
+        "",
+        "core/",                        # dispatch, queue, state, config, lib, tick
+        "gate/",                        # load gate, consent, version
+        "core/internal/api/",           # the handlers behind api/<x>
+        "core/internal/load/",          # load sequencing
+        "core/internal/events/",        # engine event bus
+        "core/internal/ext/",           # core service primitives
+
+
+        # --- kernel services ---
+        # These are here for one reason: the engine calls them itself, at boot and
+        # on every tick. A pack the engine cannot run without is not removable, and
+        # a pack that is not removable is not a module - it is part of the kernel.
+        # Shipping them as modules would either break the engine when they are
+        # deleted or force the engine through a hook tag to add two numbers.
+        #
+        # They are still published under a stable id (see PUBLISHED_SERVICES), so a
+        # feature module calls them the same way it calls any other core API.
+        "systems/math/", "core/internal/systems/math/", "core/internal/math/",
+        "systems/string/", "core/internal/systems/string/",
+        "systems/text/", "core/internal/text/",
+        "systems/rng/", "core/internal/systems/rng/", "core/internal/rng/",
+        "systems/uuid/", "core/internal/systems/uuid/", "core/internal/uuid/",
+        "systems/log/", "core/internal/systems/log/",
+        "systems/geo/", "core/internal/systems/geo/",
+        "systems/audit/", "core/internal/systems/audit/",
+        "systems/validate/",
+        # A gate, in the literal sense: every stored-string command executor passes
+        # through it before the engine macro-executes anything.
+        "systems/cmd_gate/",
+        # The event bus the engine's deferred queue drains.
+        "events/",
+    ]),
+
+    # --- feature modules -------------------------------------------------
+    # Every module owns BOTH halves of its feature: the public `api/<area>/`
+    # surface and the `core/internal/<area>/` implementation behind it. A module
+    # that owned only the public half would have nowhere to put its own internals
+    # and would end up reaching into core's, which is the bug this fixes.
+    ("player",    ["player/", "core/internal/player/"]),
+    ("world",     ["world/", "core/internal/world/"]),
+    ("tui",       ["tui/", "core/internal/tui/"]),
+    ("cmd",       ["api/cmd/", "core/internal/api/cmd/", "core/internal/cmd/"]),
+    ("store",     ["api/store/", "core/internal/api/store/"]),
+    ("wand",      ["api/wand/", "core/internal/api/wand/"]),
+    ("perm",      ["api/perm/", "core/internal/api/perm/"]),
+    ("title",     ["api/title/", "core/internal/api/title/"]),
+    ("block",     ["api/block/", "core/internal/api/block/"]),
+    ("item",      ["api/item/", "core/internal/api/item/"]),
     ("container", ["api/container/", "core/internal/api/container/"]),
     ("interaction", ["api/interaction/", "core/internal/api/interaction/"]),
-    ("gamerule", ["api/gamerule/", "core/internal/api/gamerule/"]),
-    ("toggle", ["api/toggle/"]),
-    ("trigger", ["api/trigger/", "core/internal/api/trigger/"]),
-    ("cb", ["api/cb/", "core/internal/api/cb/"]),
-    ("macro", ["api/macro/"]),
-    ("color", ["api/color/", "core/internal/systems/color/"]),
+    ("gamerule",  ["api/gamerule/", "core/internal/api/gamerule/"]),
+    ("toggle",    ["api/toggle/"]),
+    ("trigger",   ["api/trigger/", "core/internal/api/trigger/"]),
+    ("cb",        ["api/cb/", "core/internal/api/cb/"]),
+    ("macro",     ["api/macro/"]),
+    ("color",     ["api/color/", "core/internal/systems/color/"]),
     ("diagnostics", ["api/diagnostics/"]),
+
+    # --- foundation modules ----------------------------------------------
+    # These were `systems/<x>/` in the original pack and got dumped into core by
+    # the `systems/` catch-all. They are features with a public surface, an
+    # internal tree and no business living in the engine.
+    ("input",     ["input/", "core/internal/input/"]),
+    ("logic",     ["systems/logic/"]),
+    ("flag",      ["systems/flag/"]),
+    ("rate_limit", ["systems/rate_limit/", "core/internal/systems/rate_limit/"]),
+    ("sound",     ["systems/sound/"]),
+    # The public hook surface and the handlers behind it are one feature, so they
+    # move together - the same rule as every other area. Leaving the handlers in
+    # core is what made the hook module reach into core's private tree.
+    ("hook",      ["systems/hook/", "core/internal/systems/hook/"]),
 ]
 
 # `core/internal/systems/<x>/` is the engine behind the `api/<x>/` module of the same
@@ -99,8 +160,30 @@ DROP_SEGMENTS = ("api", "systems")
 
 
 def normalise_area(area: str) -> str:
-    """`api/cmd/other/run` -> `cmd/other/run`; `systems/logic/if_or` -> `logic/if_or`."""
-    return "/".join(seg for seg in area.split("/") if seg not in DROP_SEGMENTS)
+    """Map an original pack path to the id it carries in the split.
+
+    Three rewrites, in order:
+
+        api/cmd/other/run            -> cmd/other/run
+        systems/logic/if_or          -> logic/if_or
+        core/internal/api/cmd/x      -> cmd/x
+        core/internal/text/split     -> text/split
+
+    The last two also collapse `internal/api/<area>` to `<area>`, because once the
+    public and private halves live in the same module there is no reason for the
+    private half to be nested under an `api/` folder - that shape only existed to
+    keep the two halves apart inside one namespace.
+
+    `internal` is NOT dropped in general. `x/internal/...` means "private to
+    module x", which is the per-module internal the split needs; the old
+    `core/internal/...` prefix is simply a path that predates the split.
+    """
+    segments = [s for s in area.split("/") if s not in DROP_SEGMENTS]
+    # `core/internal/api/<area>/...` -> `core/internal/<area>/...`
+    if len(segments) > 3 and segments[0] == "core" and segments[1] == "internal" \
+            and segments[2] == "api":
+        segments = [segments[0], segments[1], *segments[3:]]
+    return "/".join(segments)
 
 CHILD_TYPES = ("advancement", "dialog", "function", "item_modifier", "loot_table",
                "predicate", "recipe", "tags")
@@ -142,6 +225,9 @@ HOOK_CONTRIBUTIONS = [
     ("player_init_online",   "player",      "core/internal/player/init_online"),
     ("player_init_from_name","player",      "core/internal/player/init_from_name"),
     ("player_get_name",      "player",      "player/get_name"),
+    # The hook feature's per-tick scan. Core's tick driver called it directly, which
+    # is the one thing core may never do - it makes the hook module unremovable.
+    ("hook_tick",            "hook",        "core/internal/hook/tick_scan"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -177,6 +263,18 @@ PUBLISHED_PRIMITIVES = [
 # Caller-side rewrites. A module may only reach another module through the
 # published id; the private path must not appear anywhere outside its own module.
 CROSS_MODULE_REWRITES = [
+    # input validating a captured string - the same primitives text/ and ext/ were
+    # already published for, reached from a different module.
+    ("me_core_module:core/internal/text/num_check",
+     "me_core_module:text/num_check"),
+    ("me_core_module:core/internal/text/scan_deny",
+     "me_core_module:text/scan_deny"),
+    ("me_core_module:core/internal/ext/input/int_to_score",
+     "me_core_module:core/ext/input/int_to_score"),
+    # hook resolving a player name it was handed. The player module publishes
+    # get_name; init_from_name is the same contract one step earlier.
+    ("me_player_module:core/internal/player/init_from_name",
+     "me_player_module:player/init_from_name"),
     ("me_container_module:core/internal/container/_addr",
      "me_container_module:container/addr"),
     ("me_container_module:core/internal/container/_exists",
@@ -250,6 +348,10 @@ MOVED_TO_PUBLIC = {
     "me_core_module:core/internal/ext/player/add_var_clamped",
     "me_core_module:core/internal/ext/player/toggle_var",
     "me_core_module:core/internal/ext/world/count_near",
+    "me_core_module:core/internal/text/num_check",
+    "me_core_module:core/internal/text/scan_deny",
+    "me_core_module:core/internal/ext/input/int_to_score",
+    "me_player_module:core/internal/player/init_from_name",
 }
 
 # Id → destination path, for the moved ones. Derived from CROSS_MODULE_REWRITES so

@@ -1,0 +1,14 @@
+{
+  "macroengine.log.report_header": "macroEngine report: %1$s pack(s) inspected, %2$s file(s) scanned",
+  "macroengine.log.scanned_nothing": "macroEngine: the scan examined nothing, so there is no result to report. Treat this as a failure to check, not as a clean world.",
+  "macroengine.log.meta_problem": "pack.mcmeta problem in %1$s: %2$s",
+  "macroengine.log.finding": "[%1$s] %2$s at %3$s",
+  "macroengine.log.more_findings": "... and %1$s more finding(s); see the server log for the full list",
+  "macroengine.log.scan_error": "scan error: %1$s",
+  "macroengine.log.quarantine_on": "macroEngine: you will be held back from macroEngine features until you ask to be released, or the server restarts.",
+  "macroengine.log.quarantine_off": "macroEngine: your hold has been released.",
+  "macroengine.log.quarantine_was_off": "macroEngine: no hold was in place.",
+  "macroengine.log.quarantine_status_on": "macroEngine: a hold is in place for you.",
+  "macroengine.log.quarantine_status_off": "macroEngine: no hold is in place for you.",
+  "macroengine.log.quarantine_not_needed": "macroEngine: the scan found nothing, so there is nothing to hold you back from. Nothing was changed."
+}

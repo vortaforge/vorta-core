@@ -1,0 +1,59 @@
+{
+  "description": "Ward test commands are non-vanilla. The listed RTWrapper permission diagnostics are warnings only for these exact unchanged files; the commands still require the stated permission at runtime.",
+  "wardTestRoots": [
+    "packs/DailyBonus/data/dailybonus/test/",
+    "packs/macroEngine-Datapack-v26.3/data/macroengine/test/"
+  ],
+  "permissionWarnings": [
+    {
+      "path": "packs/RTWrapper/datapack/RTWrapper-Datapack/data/rtwrapper/function/core/wrappers/internal/variants/banlist_0.mcfunction",
+      "sha256": "432bfc9ba07165ce2fb92394a56e5759a507ebadca9b6954ae5c9acf6dbf5cb7",
+      "requiredPermission": 3
+    },
+    {
+      "path": "packs/RTWrapper/datapack/RTWrapper-Datapack/data/rtwrapper/function/core/wrappers/internal/variants/save-all_0.mcfunction",
+      "sha256": "87a1e28cbe5320fb5d33030efd4305607e9f23cf438c9f368e2a75f70c1771fd",
+      "requiredPermission": 4
+    },
+    {
+      "path": "packs/RTWrapper/datapack/RTWrapper-Datapack/data/rtwrapper/function/core/wrappers/internal/variants/save-off_0.mcfunction",
+      "sha256": "1c0eef7a4dd882dae3dc78a36f4035270c54ba6577de7714a93226d10b066c15",
+      "requiredPermission": 4
+    },
+    {
+      "path": "packs/RTWrapper/datapack/RTWrapper-Datapack/data/rtwrapper/function/core/wrappers/internal/variants/save-on_0.mcfunction",
+      "sha256": "b4e5aa0ead1f7a3d88f64cbf13e522ffc634fca342891d2ba9be5ba90f1e6b93",
+      "requiredPermission": 4
+    },
+    {
+      "path": "packs/RTWrapper/datapack/RTWrapper-Datapack/data/rtwrapper/function/core/wrappers/internal/variants/stop_0.mcfunction",
+      "sha256": "ad91e2ae94321c2424e09b9f1f4b3bcc3347c1e0a3d0ccce2730b18aca8be84e",
+      "requiredPermission": 4
+    },
+    {
+      "path": "packs/RTWrapper-v1.0.1/data/rtwrapper/function/core/wrappers/internal/variants/banlist_0.mcfunction",
+      "sha256": "07e58c51b2cb810a370262aef992c738baaed4145ee574146bec9f260c6296a4",
+      "requiredPermission": 3
+    },
+    {
+      "path": "packs/RTWrapper-v1.0.1/data/rtwrapper/function/core/wrappers/internal/variants/save-all_0.mcfunction",
+      "sha256": "3990384973631b320ce123e7b293c33e24321f5d7685ad7ce27e49f3acd81d1c",
+      "requiredPermission": 4
+    },
+    {
+      "path": "packs/RTWrapper-v1.0.1/data/rtwrapper/function/core/wrappers/internal/variants/save-off_0.mcfunction",
+      "sha256": "1f94b0d5b9a5370283818d41b5c78fb3e096069756e77b7a4dfebb0fdb2e6427",
+      "requiredPermission": 4
+    },
+    {
+      "path": "packs/RTWrapper-v1.0.1/data/rtwrapper/function/core/wrappers/internal/variants/save-on_0.mcfunction",
+      "sha256": "f84b165a291339629ff8dd5b00de9c7fb5072ec86e0c0d9ba249c15c3982bb3d",
+      "requiredPermission": 4
+    },
+    {
+      "path": "packs/RTWrapper-v1.0.1/data/rtwrapper/function/core/wrappers/internal/variants/stop_0.mcfunction",
+      "sha256": "260ba6e0a432d13cd8616a47a87556d2d51cefcb12b6555f5bdff349be540ba8",
+      "requiredPermission": 4
+    }
+  ]
+}

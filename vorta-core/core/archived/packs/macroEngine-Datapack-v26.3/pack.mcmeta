@@ -1,0 +1,13 @@
+{
+  "pack": {
+    "description": "macroEngine | 26.3 | Pair with macroEngine-Resourcepack-v26.3 for engine text",
+    "min_format": [
+      121,
+      0
+    ],
+    "max_format": [
+      121,
+      0
+    ]
+  }
+}

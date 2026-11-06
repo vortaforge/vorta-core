@@ -1,0 +1,23 @@
+{
+  "name": "vortaforge-datapack-lint",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fail-closed project lint using the Spyglass Minecraft language server",
+  "license": "Unlicense",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@spyglassmc/language-server": "0.4.70",
+    "vscode-jsonrpc": "10.0.0"
+  },
+  "overrides": {
+    "@spyglassmc/core": {
+      "decompress": "npm:@xhmikosr/decompress@11.1.4"
+    }
+  }
+}

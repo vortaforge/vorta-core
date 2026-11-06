@@ -110,3 +110,68 @@ Two rules it follows:
 - **No auto-fix in `health.yml`.** It reports drift and goes red; the scheduled
   job repairs it. A checker that also writes cannot tell you whether the writer
   works.
+
+## The mirror: recording content, not just existence
+
+`index.json` answers *what repositories are there*. It does not answer *what is in
+them*, and for a while nothing did — the sync was a register of names with no
+contents attached.
+
+So each repository's default branch is now mirrored into a directory named after
+it:
+
+```
+core/                     vortaforge/core, as of the last sync
+docs/                     vortaforge/docs
+.github/                  vortaforge/.github
+```
+
+### Why a directory and not a submodule
+
+Submodules keep a real relationship: the recorded commit is pinned, `git
+submodule update` fetches it, history stays in the source repository. They also
+require a network round trip and a second command to read anything, and they
+break every tool that walks the tree without initialising them first. A reader
+looking at this repository in a browser sees an empty directory.
+
+The mirror is a plain snapshot instead, so it reads as files. The cost is that it
+is always as stale as the last sync — stated plainly in each tree's
+`.mirror.json`, which records the commit, the branch and the time.
+
+### Why the name is at the root, and the collisions that follow
+
+A repository named `docs` mirrors to `docs/`, which is also where this
+repository's own design notes live. Two things make that safe:
+
+1. The source trees nest. `vortaforge/docs` keeps its pages in `docs/`, so they
+   land in `docs/docs/`; `vortaforge/.github` keeps its workflows in
+   `.github/workflows/`, so they land in `.github/.github/workflows/`. No file
+   collides.
+2. A nested workflow is inert. GitHub reads `.github/workflows/` at a repository
+   root and nowhere else, so nothing in a mirrored tree can run.
+
+Both are properties of the current repositories, not guarantees, so the mirror
+checks. Before writing, it compares the incoming file list against the
+destination and refuses on the first real file collision. A directory being *held*
+in common is ordinary; a file being overwritten is not.
+
+### What a mirror may delete, and what it may not
+
+The destination directory is shared with this repository's own files, so "clear
+the directory and re-copy" is wrong — it deleted `docs/OPERATIONS.md` the first
+time it ran. Instead each tree carries a manifest listing exactly the paths the
+mirror wrote, and a re-sync removes exactly those. Files it did not write are
+invisible to it.
+
+That in turn is why the manifest is built from what was *copied* rather than from
+a listing of the destination: a manifest built by walking `docs/` would claim this
+repository's own notes and license their deletion on the next run.
+
+### Self-mirroring
+
+`vorta-core` is one of the repositories being mirrored, so `vorta-core/` holds a
+copy of this repository as of the previous sync. It is taken from GitHub, not from
+the working directory, which is why it cannot recurse: the clone predates the
+directory it would be written into. The `vorta-core/` directory inside it is
+excluded by name as a second guarantee — without it, each run would nest one level
+deeper.

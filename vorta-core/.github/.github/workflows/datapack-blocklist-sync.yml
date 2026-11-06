@@ -1,0 +1,255 @@
+# .github/workflows/datapack-blocklist-sync.yml
+#
+# Keeps the organisation-wide datapack blocklist in step with vortaforge/core
+# and profile-scans accounts that touch the organisation.
+#
+# Trust boundary:
+#   * read-only on this repository except for the one commit step, which runs
+#     with the default GITHUB_TOKEN and only ever writes blocklist/blocklist.json
+#     and generated/*.json;
+#   * the profile scan reads PUBLIC profile fields only (bio, company, name,
+#     blog) for accounts that already appear in a PR/issue or an invitation -
+#     never private data, never a global GitHub search, never scraping;
+#   * a hit never blocks anyone automatically. It opens an issue for a human to
+#     resolve. The guard in vortaforge/core reads the *blocklist file*, and a
+#     profile scan does not write to it -- so a hit has no effect on pull
+#     requests until a maintainer adds the account. (This comment used to claim
+#     the opposite: that PRs were "refused (fail-closed)" pending resolution.
+#     That was untrue, and the issue text said the same untrue thing.)
+#
+#   * there is no automatic organisation-wide enforcement anywhere in this
+#     workflow. Membership is not gated, and `datapack_guard.py --membership`
+#     is a manual CLI check, not something this workflow calls.
+#
+# Requires no secrets beyond the default token. Actions are pinned by SHA, as
+# the maintainer guide requires (the same rule the core repository enforces).
+name: Datapack blocklist sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily. Cheap: one raw file, at most a handful of profile lookups.
+    - cron: "17 5 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/blocklist_sync.py"
+      - "tests/**"
+      - "blocklist/**"
+      - ".github/workflows/datapack-blocklist-sync.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: datapack-blocklist-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Mirror core blocklist and scan profiles
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write      # only to commit the generated mirror
+      issues: write        # only to open a profile-scan issue
+      pull-requests: write # list recent PR authors, and open the mirror PR
+                           # (main is protected, so the bot cannot push directly)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Run the sync regression tests
+        shell: bash
+        # Fail before touching the mirror: these tests pin the determinism and
+        # both-file checks that keep this workflow from committing no-ops.
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Check for drift against vortaforge/core
+        id: drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          if python3 scripts/blocklist_sync.py --check --fetch; then
+            echo "mirror_up_to_date=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "mirror_up_to_date=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Regenerate the mirror
+        if: steps.drift.outputs.mirror_up_to_date != '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/blocklist_sync.py --write --fetch
+
+      - name: Commit the mirror
+        if: steps.drift.outputs.mirror_up_to_date != '1'
+        shell: bash
+        env:
+          # Opening the pull request needs the CLI to be authenticated.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- blocklist generated; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git config user.name "vortaforge-maintenance"
+          git config user.email "actions@vortaforge.local"
+          git add blocklist/blocklist.json generated/blocklist.json
+          git commit -m "chore(blocklist): mirror vortaforge/core blocklist [skip ci]"
+
+          # `main` is protected (ruleset "main": no direct pushes, PR required).
+          # Everything short of a pull request has been tried against the real
+          # repository:
+          #
+          #   git push                  -> GH013, "Changes must be made through a
+          #                                pull request"
+          #   Integration bypass actor  -> GitHub rejects it for repository-level
+          #                                rulesets ("must be part of the ruleset
+          #                                source or owner organization")
+          #   gh pr create              -> "GitHub Actions is not permitted to
+          #                                create or approve pull requests"
+          #
+          # The last one is a repository setting that would let *any* workflow
+          # approve and merge its own pull request. On the repository that holds
+          # the organisation's security policy, turning that on to save one
+          # click is a bad trade, and it is the opposite of what this audit asks
+          # for. A long-lived personal token would be worse.
+          #
+          # So the bot pushes the branch and opens an issue with the one-click
+          # PR link. Drift is detected automatically, the branch is prepared
+          # automatically, and a human performs the final merge. `issues: write`
+          # is already granted; nothing new is enabled.
+          branch="automation/blocklist-mirror"
+          git push --force origin "HEAD:${branch}" 2>/dev/null || git push --force origin "HEAD:${branch}"
+          pr_url="https://github.com/${{ github.repository }}/compare/main...${branch}?expand=1"
+
+          if gh pr list --repo "${{ github.repository }}" --head "$branch" \
+               --state open --json number --jq '.[0].number' | grep -q .; then
+            echo "mirror pull request already open; branch updated"
+          elif gh issue list --repo "${{ github.repository }}" --state open \
+               --search "blocklist mirror is stale in:title" --json number --jq '.[].number' | grep -q .; then
+            echo "an open stale-mirror issue already exists; branch updated"
+          else
+            gh issue create --repo "${{ github.repository }}" \
+              --title "Blocklist mirror is stale: merge automation/blocklist-mirror" \
+              --body "The scheduled sync found drift between vortaforge/core's blocklist and the mirror in this repository. The corrected mirror is already committed to the automation/blocklist-mirror branch; open the pull request: [review and open it](${pr_url}). main is protected and GitHub Actions is not permitted to create or approve pull requests here, deliberately: enabling that would let any workflow approve and merge its own pull request on the repository that holds the organisation's security policy. A maintainer merges this one. This issue is reused while it stays open."
+          fi
+
+      - name: Collect accounts to profile-scan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Only accounts that already interacted with this repository: the
+          # last 50 PR authors and the last 50 issue authors. Nothing else is
+          # collected - not organisation members, not pending invitations, not
+          # a global search. This list is the scan's entire input.
+          : > /tmp/logins.txt
+          # Fail closed: `|| true` here meant an API error produced an empty
+          # list, the scan found nothing to look at, exited 0, and the job
+          # reported "no hits" when it had effectively checked nobody.
+          collected=0
+          if gh pr list --repo "${{ github.repository }}" --state all --limit 50 \
+               --json author --jq '.[].author.login' >> /tmp/logins.txt ; then
+            collected=$((collected + 1))
+          else
+            echo "::error::gh pr list failed; refusing to report a clean scan from a partial account list."
+            exit 1
+          fi
+          if gh issue list --repo "${{ github.repository }}" --state all --limit 50 \
+               --json author --jq '.[].author.login' >> /tmp/logins.txt ; then
+            collected=$((collected + 1))
+          else
+            echo "::error::gh issue list failed; refusing to report a clean scan from a partial account list."
+            exit 1
+          fi
+          sort -u /tmp/logins.txt -o /tmp/logins.txt
+          echo "account sources that succeeded: $collected/2"
+          echo "accounts to scan: $(wc -l < /tmp/logins.txt)"
+
+      - name: Profile scan (public fields only)
+        id: scan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # An empty list is not "nothing to see": the repo has pull requests and
+          # issues, so zero authors means the listing above broke in a way that
+          # still exited 0, or the repo is genuinely empty. Either way this run
+          # cannot claim the accounts were checked, so it must not report clean.
+          if [ ! -s /tmp/logins.txt ]; then
+            echo "::error::no accounts collected; a scan that checked nobody cannot report success."
+            exit 1
+          fi
+          if python3 scripts/blocklist_sync.py --scan-profiles --logins-file /tmp/logins.txt; then
+            echo "hits=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "hits=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open an issue for unresolved profile hits
+        if: steps.scan.outputs.hits == '1'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          title="Datapack profile scan: unresolved hits $(date -u +%F)"
+          body="$(python3 - <<'PY'
+          import json
+          report = json.load(open("generated/profile-scan.json"))
+          lines = ["The public-profile scan matched accounts that look like datapack developers.",
+                   "", "Policy: datapack developers are blocked organisation-wide",
+                   "(maintainer decision 2026-11-05). Resolve each account below by either",
+                   "adding it to `blocked` in vortaforge/core's `blocklist/blocklist.json` or",
+                   "exempting it in `managed.accounts`.", "",
+                   "| Account | Verdict | Matched tokens |", "|---|---|---|"]
+          for result in report["results"]:
+              if result["verdict"] in ("hit", "unknown"):
+                  lines.append(f"| @{result['login']} | {result['verdict']} | "
+                               f"{', '.join(result['matched_tokens']) or '-'} |")
+          lines += ["", "**This is a request for human review. It does not block anyone.**",
+                    "The account above is *not* on the blocklist and its pull requests are",
+                    "not refused. The guard reads `blocklist/blocklist.json`; a profile-scan",
+                    "hit does not write to it. If a maintainer decides the match is",
+                    "correct, they add the account there and the change is reviewed like",
+                    "any other. If it is a false positive, close this issue.",
+                    "",
+                    "Only public profile fields were read; no private data and no",
+                    "credentials are included in this report."]
+          print("\n".join(lines))
+          PY
+          )"
+          if gh issue list --repo "${{ github.repository }}" --state open \
+               --search "Datapack profile scan in:title" --json number --jq '.[].number' \
+               | grep -q .; then
+            echo "an open scan issue already exists; updating instead of duplicating"
+            number="$(gh issue list --repo "${{ github.repository }}" --state open \
+              --search "Datapack profile scan in:title" --json number --jq '.[0].number')"
+            gh issue comment "$number" --repo "${{ github.repository }}" --body "$body"
+          else
+            gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
+          fi
+
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: blocklist-sync-report
+          path: generated/
+          if-no-files-found: ignore
+          retention-days: 30

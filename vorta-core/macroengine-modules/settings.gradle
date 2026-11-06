@@ -1,0 +1,51 @@
+// =============================================================================
+// macroEngine Modules - settings.gradle
+// =============================================================================
+//
+// One core plus modules, the Fabric API arrangement: the core is the engine, each
+// module is an independent data pack that declares the core as its dependency and
+// attaches to it through hook tags. Nothing in the core names a module.
+//
+// The generated packs live under `packs/` (produced by tools/split.py) and
+// each is registered here as its own Gradle sub-project, so `:me_cmd_module:build`
+// produces a jar for exactly one module and nothing else. That is what makes the
+// modules independently shippable rather than "one big jar with folders in it".
+//
+// `packs/` is re-generated, so the list is discovered rather than hard-coded: a
+// module added by the splitter appears in the build without editing this file.
+// =============================================================================
+
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'macroengine-modules'
+
+def packsDir = file('packs')
+def moduleDirs = packsDir.isDirectory()
+        ? packsDir.listFiles().findAll { it.isDirectory() }.sort { it.name }
+        : []
+
+moduleDirs.each { dir ->
+    include ":${dir.name}"
+    project(":${dir.name}").projectDir = dir
+}
+
+// A build run before `tools/split.py` should say so plainly instead of failing
+// with "no sub-projects" three screens later.
+gradle.projectsLoaded {
+    if (moduleDirs.isEmpty()) {
+        logger.warn('')
+        logger.warn('  No packs found under packs/.')
+        logger.warn('  Generate them first:  python3 tools/split.py \\')
+        logger.warn('                          --source <pack> --out build')
+        logger.warn('')
+    }
+}

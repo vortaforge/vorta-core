@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "macroengine",
+  "version": "${version}",
+  "name": "macroEngine",
+  "description": "Validation layer for the macroEngine data pack. Checks pack structure, prompt injection and suspicious links, and reports them at world load, on the server log, and in a warning before a world opens.",
+  "authors": [
+    "VortaForge"
+  ],
+  "contact": {
+    "homepage": "https://vortaforge.github.io/docs/",
+    "sources": "https://github.com/vortaforge/core"
+  },
+  "license": "See LICENSE",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.vortaforge.macroengine.MacroEngine"
+    ],
+    "client": [
+      "net.vortaforge.macroengine.client.MacroEngineClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "fabric-api": "*",
+    "minecraft": "~26.3",
+    "java": ">=25"
+  }
+}

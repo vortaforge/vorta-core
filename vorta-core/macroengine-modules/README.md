@@ -1,0 +1,165 @@
+# macroengine-modules
+
+[![CI](https://github.com/vortaforge/macroengine-modules/actions/workflows/ci.yml/badge.svg)](https://github.com/vortaforge/macroengine-modules/actions/workflows/ci.yml)
+[![Upstream canary](https://github.com/vortaforge/macroengine-modules/actions/workflows/upstream-canary.yml/badge.svg)](https://github.com/vortaforge/macroengine-modules/actions/workflows/upstream-canary.yml)
+
+**macroEngine**, split from one data pack into **a core plus independent modules**.
+The arrangement mirrors Fabric API: the core carries the engine, each module
+attaches to it through *hook tags*, and the core never names a module.
+
+```
+me_core_module      engine: internals, load, tick, hook slots
+me_cmd_module       command execution, freeze
+me_player_module    player registry
+me_wand_module      wand
+...                 (17 more modules)
+```
+
+## Why this arrangement
+
+The single-pack macroEngine was 1559 files, 1280 functions and 105 tags. Everything
+lived in one namespace, so "let me remove this feature" meant hand-picking its
+references out of more than 9000 of them. Split, removing a module is deleting
+`packs/me_wand_module/`.
+
+Two rules make that possible, and the verifier enforces both:
+
+1. **The core never calls a module by name.** When the core needs a module it calls
+   `function #me_core_module:hook/<slot>`. The module defines *the same tag id* in
+   its own pack and adds itself; the game unions the two definitions.
+2. **A module never reaches into another module's `core/internal` tree.** The only
+   thing it may call is the other module's *published* surface.
+
+`gradlew check` verifies both. Deleting a module does not break the pack.
+
+## Id scheme
+
+```
+me_<module>_module:<function path>
+```
+
+The `api/` and `systems/` segments are **gone**: the namespace already says which
+module, and the path says which feature. Old `macroengine:api/cmd/other/run` becomes
+`me_cmd_module:cmd/other/run`. Zero collisions across all 1280 functions.
+
+| Before | After |
+|---|---|
+| `macroengine:api/wand/give_custom` | `me_wand_module:wand/give_custom` |
+| `macroengine:systems/logic/if_or` | `me_core_module:logic/if_or` |
+| `macroengine:core/internal/text/split` | `me_core_module:text/split` (published) |
+| `macroengine:core/internal/player/init` | `me_player_module:core/internal/player/init` |
+
+## Building
+
+Each module is its own Gradle sub-project and produces its own jar:
+
+```bash
+export JAVA_HOME=/path/to/jdk25     # 26.3 requires Java 25
+
+python3 tools/split.py --source <macroEngine-26.3 pack> --out . --in-place
+./gradlew dist                      # build/dist/*.jar - 20 packs
+./gradlew check                     # verify references, boundaries, hooks
+./gradlew :me_cmd_module:dist       # one module's jar
+```
+
+`packs/` is generated output and is not committed. It deliberately sits **outside**
+`build/`: `gradlew clean` deletes `build/`, and the packs are an *input* to the
+build (they are its sub-projects), not an output of it. Putting them under `build/`
+made `clean` delete the thing it was about to build.
+
+The jars can be dropped straight into a world's `datapacks/` folder. **No module
+loads without core**, but core loads and runs on its own.
+
+## Modules
+
+| Module | Files | What it does |
+|---|---:|---|
+| `me_core_module` | 836 | engine, hook slots, load/tick, text and math services |
+| `me_cmd_module` | 185 | command execution, freeze, multi_cmd |
+| `me_player_module` | 181 | player registry, join/leave, name resolution |
+| `me_store_module` | 71 | persistent key-value store |
+| `me_perm_module` | 34 | permissions |
+| `me_world_module` | 29 | world operations |
+| `me_container_module` | 27 (+4 published) | container slot operations |
+| `me_wand_module` | 26 | wand |
+| `me_toggle_module` | 25 | on/off flags |
+| `me_cb_module` | 23 | command block queue |
+| `me_block_module` | 20 | block behaviour registry |
+| `me_title_module` | 17 | title / actionbar |
+| `me_item_module` | 16 | items |
+| `me_interaction_module` | 16 | interaction scan |
+| `me_color_module` | 13 | colour |
+| `me_gamerule_module` | 13 | gamerules |
+| `me_trigger_module` | 12 | trigger registry |
+| `me_tui_module` | 8 | text UI |
+| `me_macro_module` | 5 | macro helpers |
+| `me_diagnostics_module` | 2 | diagnostics |
+
+## Releases and CI
+
+Releases are built from tags, not from a working directory:
+
+```bash
+git tag -a v1.0.0 -m "macroEngine modules 1.0.0"
+git push origin v1.0.0
+```
+
+That builds all 20 packs, stamps every `pack.mcmeta` with the tag's version,
+verifies the jars really carry it, and attaches them plus `SHA256SUMS.txt` to a
+GitHub Release. A tag that already has a release is refused rather than
+overwritten — people have downloaded those jars.
+
+| Workflow | Runs | Does |
+|---|---|---|
+| `ci.yml` | every push and PR | split, verify, prove determinism, build |
+| `release.yml` | on a `v*` tag | build, verify again, publish |
+| `upstream-canary.yml` | daily | re-split against today's upstream pack |
+
+The awkward thing all three have in common: `packs/` is not committed, so a fresh
+checkout has nothing to build. Each job fetches the source pack from
+`vortaforge/core` and re-runs the split. That is deliberate — the split is the
+product, and a CI that only built previously generated output would never catch a
+regression in the splitter itself.
+
+`modules.json` **is** committed, unlike the packs it describes. It is the canary's
+baseline: a split that silently loses a module or moves ids into the wrong pack
+still passes verification, because the result is a perfectly consistent layout
+that nobody reviewed. The only way to notice is to diff against the layout a human
+looked at once — which is what `tools/check_shape.py` does.
+
+Fork pull requests need no secrets: the source pack is public, so the token falls
+back to the workflow's own. If `vortaforge/core` ever goes private, set
+`SOURCE_READ_TOKEN`.
+
+## Writing your own module
+
+`docs/CORE.md` describes the hook contract; `docs/MODULE.md` walks through a new
+module. In short: make a folder, use the `me_<name>_module` namespace, add your
+value to the core's hook tag. You do not need to change a single line in the core.
+
+## Tools
+
+| File | Purpose |
+|---|---|
+| `tools/split.py` | splits the source pack: rewrites ids, emits hook tags |
+| `tools/verify.py` | checks the split output (references, boundaries, cycles, hooks, pack.mcmeta) |
+
+`split.py` never modifies its source. It refuses to clear an output directory that
+looks like a project (a `.git`, or one of `src`/`tools`/`docs`); the project layout
+is written with `--out . --in-place`, which clears only `packs/` and the two
+manifests.
+
+## Known limits
+
+- `me_cmd_module:cmd/other/action_run` is a macro function: its target is built at
+  run time from `$(type)` and cannot be resolved statically. It is listed in
+  `MACRO_REFS.txt` and exempted in the verifier.
+- `me_tui_module` writes `/function $(fn)` inside a tellraw `click_event`; same
+  reason.
+- Some tag references that already existed in the source pack (such as
+  `#macroengine:internal/dispatch`) remain in the same shape in the split output.
+  They are the source's own condition, not split damage.
+
+## License
+
+See `LICENSE`.

@@ -1,0 +1,9 @@
+{
+  "entity": "this",
+  "predicate": {
+    "effects": {
+      "minecraft:fire_resistance": {}
+    }
+  },
+  "type": "minecraft:entity_properties"
+}

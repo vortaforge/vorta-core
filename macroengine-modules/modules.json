@@ -15,6 +15,11 @@
       "returns": false,
       "empty": false
     },
+    "hook_tick": {
+      "tag": "me_core_module:hook/hook_tick",
+      "returns": false,
+      "empty": false
+    },
     "interaction_tick": {
       "tag": "me_core_module:hook/interaction_tick",
       "returns": false,
@@ -91,9 +96,13 @@
       "name": "core",
       "namespace": "me_core_module",
       "pack": "packs/me_core_module",
-      "files": 766,
+      "files": 593,
       "hooks": {},
       "publishes": [
+        {
+          "id": "me_core_module:ext/input/int_to_score",
+          "moved": true
+        },
         {
           "id": "me_core_module:ext/perm_count",
           "moved": true
@@ -123,6 +132,10 @@
           "moved": true
         },
         {
+          "id": "me_core_module:text/num_check",
+          "moved": true
+        },
+        {
           "id": "me_core_module:text/replace",
           "moved": true
         },
@@ -132,6 +145,10 @@
         },
         {
           "id": "me_core_module:text/safe",
+          "moved": true
+        },
+        {
+          "id": "me_core_module:text/scan_deny",
           "moved": true
         },
         {
@@ -165,7 +182,12 @@
           "me_player_module:player/get_name"
         ]
       },
-      "publishes": []
+      "publishes": [
+        {
+          "id": "me_player_module:player/init_from_name",
+          "moved": true
+        }
+      ]
     },
     {
       "name": "world",
@@ -382,6 +404,58 @@
       "pack": "packs/me_diagnostics_module",
       "files": 2,
       "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "input",
+      "namespace": "me_input_module",
+      "pack": "packs/me_input_module",
+      "files": 45,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "logic",
+      "namespace": "me_logic_module",
+      "pack": "packs/me_logic_module",
+      "files": 10,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "flag",
+      "namespace": "me_flag_module",
+      "pack": "packs/me_flag_module",
+      "files": 13,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "rate_limit",
+      "namespace": "me_rate_limit_module",
+      "pack": "packs/me_rate_limit_module",
+      "files": 14,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "sound",
+      "namespace": "me_sound_module",
+      "pack": "packs/me_sound_module",
+      "files": 3,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "hook",
+      "namespace": "me_hook_module",
+      "pack": "packs/me_hook_module",
+      "files": 88,
+      "hooks": {
+        "hook_tick": [
+          "me_hook_module:core/internal/hook/tick_scan"
+        ]
+      },
       "publishes": []
     }
   ],

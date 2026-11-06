@@ -1,0 +1,16 @@
+# Mirrored trees are generated from other repositories, not written here. Marking
+# them keeps language statistics and code search from counting another
+# repository's snapshot as this one's own source.
+#
+# Deliberately NOT `-diff`: that marks a file binary, and two concurrent syncs
+# would then produce a rebase conflict that cannot be resolved by content. Text
+# diffs on a mirror are wasteful but they heal.
+core/**                 linguist-generated=true linguist-vendored
+docs/README.md          linguist-generated=true
+docs/docs/**            linguist-generated=true
+docs/index.html         linguist-generated=true
+docs/mods/**            linguist-generated=true
+docs/.github/**         linguist-generated=true
+.github/.github/**      linguist-generated=true
+macroengine-modules/**  linguist-generated=true
+vorta-core/**           linguist-generated=true

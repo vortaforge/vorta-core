@@ -1,0 +1,20 @@
+#!/bin/sh
+# scripts/git/hooks/pre-commit - refuse a commit that creates datapack content.
+#
+# Install once with:  git config core.hooksPath scripts/git/hooks
+# (docs/ARCHIVAL.md, "Installation")
+#
+# Bypassing this hook is possible with `git commit --no-verify`, which is
+# exactly why the same rules also run in scripts/git/hooks/pre-push and in CI
+# (.github/workflows/quality.yml, job "datapack-guard"). The hook is a
+# courtesy; CI is the gate.
+set -eu
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+if [ ! -f scripts/repo/datapack_guard.py ]; then
+    echo "pre-commit: scripts/repo/datapack_guard.py is missing - refusing to commit (fail-closed)." >&2
+    exit 1
+fi
+
+exec python3 scripts/repo/datapack_guard.py --staged --protect --blocklist
