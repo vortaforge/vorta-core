@@ -211,11 +211,18 @@ def main(argv: list[str]) -> int:
         # record of the trees it had already written.
         out = {k: v for k, v in index.items() if k not in {
             "org", "generatedAt", "count", "repositories"}}
+        repositories = [by_name[n] for n in sorted(by_name, key=str.lower)]
+        # `generatedAt` is a clock, and a clock in a committed file means a commit
+        # every six hours whose only content is the time. It is kept from the
+        # previous run unless the listing actually moved.
+        generated = index.get("generatedAt")
+        if repositories != index.get("repositories") or args.org != index.get("org"):
+            generated = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         out.update({
             "org": args.org,
-            "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "generatedAt": generated or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "count": len(by_name),
-            "repositories": [by_name[n] for n in sorted(by_name, key=str.lower)],
+            "repositories": repositories,
         })
         args.index.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
 

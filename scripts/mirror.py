@@ -365,16 +365,15 @@ def main(argv: list[str]) -> int:
 
         # Keep the old stamp when the mirrors did not actually move. Writing a
         # fresh timestamp unconditionally meant every scheduled run produced a
-        # commit whose only change was the clock.
+        # commit whose only change was the clock. sync.py applies the same rule to
+        # `generatedAt`, for the same reason.
         before = index.get("mirrors") or {}
         unchanged = json.dumps(before, sort_keys=True) == json.dumps(
             out["mirrors"], sort_keys=True)
         if unchanged and index.get("mirrorsGeneratedAt"):
             stamp = index["mirrorsGeneratedAt"]
-        # `mirrorsGeneratedAt` moves on every run by definition, so writing it
-        # unconditionally produced a commit every six hours whose only content
-        # was the time. When nothing else changed, the previous stamp is kept and
-        # the file is left byte-identical.
+        # The result is only written when it differs from what is on disk, so a
+        # run with nothing to say leaves the file byte-identical.
         rendered = json.dumps({**out, "mirrorsGeneratedAt": stamp}, indent=2) + "\n"
         previous = (args.index.read_text(encoding="utf-8")
                     if args.index.exists() else "")

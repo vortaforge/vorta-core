@@ -227,5 +227,38 @@ def test_apply_preserves_keys_owned_by_other_scripts():
     assert [r["name"] for r in after["repositories"]] == ["kept"]
 
 
+def test_unchanged_listing_keeps_generated_at():
+    """A sync that changes nothing must not change index.json.
+
+    `generatedAt` was rewritten on every run, so the scheduled sync produced a
+    commit every six hours whose only content was the clock. A clock belongs in
+    the ledger (which is append-only history), not in the state file.
+    """
+    from pathlib import Path as _Path
+    import tempfile as _tempfile
+
+    work = _Path(_tempfile.mkdtemp())
+    index = work / "index.json"
+    first = repo("kept")
+    index.write_text(json.dumps({
+        "org": "vortaforge", "generatedAt": "2026-01-01T00:00:00Z",
+        "count": 1, "repositories": [first],
+    }), encoding="utf-8")
+
+    import sync as sync_module  # noqa: PLC0415
+
+    original = sync_module.discover
+    sync_module.discover = lambda org, include_archived: [first]
+    try:
+        assert sync_module.main(["--org", "vortaforge", "--apply",
+                                 "--index", str(index),
+                                 "--ledger", str(work / "events.log")]) == 0
+    finally:
+        sync_module.discover = original
+
+    after = json.loads(index.read_text(encoding="utf-8"))
+    assert after["generatedAt"] == "2026-01-01T00:00:00Z", after["generatedAt"]
+
+
 if __name__ == "__main__":
     raise SystemExit(_run_all())
