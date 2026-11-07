@@ -24,8 +24,6 @@
 #   execute unless function macroengine:api/perm/require run return 0
 # ======================================================================================
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 # Strict callers (systems/cmd_gate) set in.strict:1b and are never bypassed by the switches below.
 execute store success score #macroengine.pr_strict macroengine.tmp if data storage macroengine:perm_require in{strict:1b}
 data remove storage macroengine:perm_require in.strict

@@ -1,7 +1,5 @@
 # macroengine:core/config/_set_str [MACRO, INTERNAL]  $(key) is a schema key
 # The string must pass safe_name (no quotes, backslashes, braces, whitespace...) and fit the key's max length.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:validate in
 data modify storage macroengine:validate in.value set from storage macroengine:engine config_in.value
 execute unless function macroengine:systems/validate/safe_name run return 0

@@ -1,8 +1,6 @@
 # macroengine:systems/math/vec/internal/dot_exec [MACRO]
 # INPUT: $(ax), $(ay), $(az), $(bx), $(by), $(bz)
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 $scoreboard players set $vdax macroengine.tmp $(ax)
 $scoreboard players set $vdbx macroengine.tmp $(bx)
 scoreboard players operation $vdax macroengine.tmp *= $vdbx macroengine.tmp

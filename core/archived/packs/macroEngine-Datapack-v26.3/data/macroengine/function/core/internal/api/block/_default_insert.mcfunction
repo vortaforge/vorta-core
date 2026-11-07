@@ -1,7 +1,5 @@
 # macroengine:core/internal/api/block/_default_insert [INTERNAL]
 # Default insert: the item goes into the first free slot (the slot used is written to macroengine:input slot).
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless data storage macroengine:input item.id run return 0
 scoreboard players set #macroengine.chk macroengine.tmp 0
 execute store result score #macroengine.chk macroengine.tmp run function macroengine:core/internal/api/container/_size_pick {src:"tmp.k",ovr:"size"}

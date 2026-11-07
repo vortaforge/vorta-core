@@ -7,8 +7,6 @@
 # USAGE  data remove storage macroengine:validate in
 #        data modify storage macroengine:validate in.value set value "mypack:on_insert"
 #        execute if function macroengine:systems/validate/function_id run ...
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:validate out set value {valid:0b}
 data remove storage macroengine:validate fid
 data modify storage macroengine:validate fid.v set string storage macroengine:validate in.value

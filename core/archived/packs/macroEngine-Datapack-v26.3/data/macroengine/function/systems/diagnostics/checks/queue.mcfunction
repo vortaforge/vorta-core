@@ -2,8 +2,6 @@
 # Internal: called by systems/diagnostics/collect. Reads the work queue size and the applied cap.
 # Codes: queue.over_cap  queue.not_draining:sys_queue_off
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 
 execute store result score #macroengine.dg_q macroengine.tmp run data get storage macroengine:engine work_queue
 execute store result storage macroengine:output diagnostics.queue.size int 1 run scoreboard players get #macroengine.dg_q macroengine.tmp

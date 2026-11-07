@@ -2,8 +2,6 @@
 # Pops first cmd from _cb_seq.cmds, computes its delay, pushes to queue.
 
 # Increment step counter and compute cumulative delay
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players add #cb_seq_step macroengine.tmp 1
 execute store result score #cb_delay macroengine.tmp run scoreboard players get #cb_seq_step macroengine.tmp
 scoreboard players operation #cb_delay macroengine.tmp *= #cb_seq_idx macroengine.tmp

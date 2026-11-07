@@ -3,8 +3,6 @@
 # RETURN 1 when s is a whole number (or decimal), 0 otherwise with err set.
 # Accepts an optional leading '-'. A '.' must have digits on both sides.
 # No size limit here; to_number adds one.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:text err
 execute store result score #tx_len macroengine.tmp run data get storage macroengine:text s
 execute store result score #tx_dotok macroengine.tmp run data get storage macroengine:text allow_dot

@@ -1,6 +1,6 @@
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
-function macroengine:core/lib/process_queue
+# The work queue (and its drain loop) is the lib module. Reached through the
+# queue_process slot, so an install without lib simply has nothing to drain.
+function #macroengine:hook/queue_process
 
 # CB fire cooldown (see core/internal/systems/cb/process_step)
 execute if score #cb_cd macroengine.tmp matches 1.. run scoreboard players remove #cb_cd macroengine.tmp 1

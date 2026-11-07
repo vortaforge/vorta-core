@@ -10,8 +10,6 @@
 #   gr_matches   — (optional) scoreboard range string, e.g. "5..10"
 
 # ── Boolean: true ────────────────────────────────────────────────────────────
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:input {value:"true"} if data storage macroengine:input gr_on_true run return run function macroengine:core/internal/api/gamerule/call_on_true with storage macroengine:input {}
 
 # ── Boolean: false ───────────────────────────────────────────────────────────

@@ -1,11 +1,9 @@
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 forceload add 0 0
 
-data modify storage macroengine:input func set value "macroengine:core/lib/sync_tick"
+data modify storage macroengine:input func set value "macroengine:core/runtime/sync_tick"
 data modify storage macroengine:input interval set value 20
 data modify storage macroengine:input key set value "sync_tick"
-function macroengine:core/lib/schedule with storage macroengine:input {}
+function macroengine:core/runtime/schedule with storage macroengine:input {}
 data remove storage macroengine:input func
 data remove storage macroengine:input interval
 data remove storage macroengine:input key

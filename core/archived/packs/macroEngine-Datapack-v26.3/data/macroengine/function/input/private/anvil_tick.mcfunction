@@ -2,8 +2,6 @@
 # @s = player with an open anvil session, at @s. Called every tick by input/anvil.
 
 # Session timeout: 1200 ticks = 60 seconds after the anvil was opened.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players add @s macroengine.anvil_t 1
 execute if score @s macroengine.anvil_t matches 1200.. run return run function macroengine:input/private/anvil_end
 

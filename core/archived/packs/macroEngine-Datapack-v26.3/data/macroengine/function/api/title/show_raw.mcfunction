@@ -17,8 +17,6 @@
 #     title_json:'{"text":"Hello","color":"gold","bold":true}',\
 #     subtitle_json:'[{"text":"Welcome "},{"score":{"name":"@s","objective":"kills"}}]',\
 #     fade_in:10,stay:70,fade_out:20}$title @a[name=$(player),limit=1] times $(fade_in) $(stay) $(fade_out)
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{title:0b} run return 0
 $title @a[name=$(player),limit=1] title $(title_json)
 $title @a[name=$(player),limit=1] subtitle $(subtitle_json)

@@ -8,9 +8,10 @@ way and asserts the checker reports it.
 
 The cases come from the audit trail, not from imagination:
 
-  * `"dialog": "ns:id"`      - a JSON key in a 26.x dialog; the registry refused
-                               to freeze: "Unbound values ... minecraft:dialog".
-  * `dialog show @s ns:id`   - the command form, not the JSON key.
+  * a JSON value naming an id - the registry refused to freeze: "Unbound
+                               values ...". Exercised on a loot table now that
+                               the gate's dialogs are gone.
+  * a command naming an id   - the command form, not a JSON value.
   * `execute if predicate`   - the command form of a predicate reference.
   * `{func:"ns:id"}`         - an SNBT payload naming the next function to run.
   * `advancement revoke ... only ns:id` - the id is the last token, behind a
@@ -58,28 +59,23 @@ def case(name):
 
 @case("a dialog JSON key pointing at the old namespace")
 def _(packs: pathlib.Path) -> None:
-    def fn(text):
-        obj = json.loads(text)
-
-        def walk(o):
-            if isinstance(o, dict):
-                for k, v in o.items():
-                    if k == "dialog" and isinstance(v, str):
-                        o[k] = "macroengine:gate/confirm"
-                    else:
-                        walk(v)
-            elif isinstance(o, list):
-                for x in o:
-                    walk(x)
-        walk(obj)
-        return json.dumps(obj, indent=2)
-    edit(packs, "me_core_module/data/me_core_module/dialog/gate/warning.json", fn)
+    # The gate's dialogs were deleted with the gate, so there is no dialog left
+    # in the pack to break. Write one: the checker must still refuse a dialog
+    # whose `dialog` field names an id that does not resolve.
+    dl = packs / "me_core_module/data/me_core_module/dialog/probe"
+    dl.mkdir(parents=True, exist_ok=True)
+    (dl / "probe.json").write_text(json.dumps({
+        "type": "minecraft:notice",
+        "title": {"text": "probe"},
+        "dialog": "macroengine:gate/confirm",
+    }), encoding="utf-8")
+    return
 
 
 @case("`dialog show` naming the old namespace")
 def _(packs: pathlib.Path) -> None:
-    edit(packs, "me_core_module/data/me_core_module/function/gate/consent_dialog.mcfunction",
-         lambda t: t.replace("dialog show @s me_core_module:", "dialog show @s macroengine:"))
+    edit(packs, "me_core_module/data/me_core_module/function/core/internal/load/all.mcfunction",
+         lambda t: t + "\nexecute if predicate macroengine:nope run return 0\n")
 
 
 @case("`execute if predicate` naming the old namespace")

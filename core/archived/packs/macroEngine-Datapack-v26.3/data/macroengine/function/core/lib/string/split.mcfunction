@@ -6,8 +6,6 @@
 # Output: macroengine:output string.result — list of string segments
 # Dep:    macroengine:core/internal/text (in-house)
 # Note:   an unset separator defaults to " "
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:text s set from storage macroengine:input string
 data modify storage macroengine:text sep set value " "
 data modify storage macroengine:text sep set from storage macroengine:input separator

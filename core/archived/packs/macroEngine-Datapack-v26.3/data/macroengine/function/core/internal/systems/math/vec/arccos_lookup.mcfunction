@@ -2,8 +2,6 @@
 # $vang_dot macroengine.tmp = cos×1000 value ([-1000, 1000])
 # 10° resolution arccos lookup table.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if score $vang_dot macroengine.tmp matches 993.. run data modify storage macroengine:output result set value 0
 execute if score $vang_dot macroengine.tmp matches 963..992 run data modify storage macroengine:output result set value 10
 execute if score $vang_dot macroengine.tmp matches 903..962 run data modify storage macroengine:output result set value 20

@@ -5,8 +5,6 @@
 # second group, the storage record from grant survives but the tag is
 # removed here - re-grant it if the player must keep it. Admin-only.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{perm:0b} run return 0
 execute if entity @s unless entity @s[tag=macroengine.admin] run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"translate":"macroengine.msg.permission_denied","color":"red"}]
 execute if entity @s unless entity @s[tag=macroengine.admin] run return 0

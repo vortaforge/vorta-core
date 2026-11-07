@@ -11,8 +11,6 @@
 # ─────────────────────────────────────────────────────────────────
 
 # Summon the anchor stand at player's exact position
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 summon minecraft:armor_stand ~ ~ ~ {Invisible:1b,Marker:1b,NoGravity:1b,Tags:["macroengine.freeze_anchor"]}
 
 # Copy this player's PID to a tmp score, then copy to the nearest

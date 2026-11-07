@@ -3,8 +3,6 @@
 # sub-block motion visible after the int cast); any axis change marks the
 # player as moving, then the cache is refreshed.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:core/internal/player/temp list set from entity @s Pos
 
 # X axis

@@ -6,8 +6,6 @@
 # Fields 0..f are used as indices into the hex lookup table.
 # The same fields are overwritten with hex string results.
 # ============================================================
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 $data modify storage macroengine:uuid _tmp.0 set from storage macroengine:uuid hex_chars[$(0)]
 $data modify storage macroengine:uuid _tmp.1 set from storage macroengine:uuid hex_chars[$(1)]
 $data modify storage macroengine:uuid _tmp.2 set from storage macroengine:uuid hex_chars[$(2)]

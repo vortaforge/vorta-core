@@ -3,8 +3,6 @@
 # $(player), $(key) validated; #ext_pv_d / _min / _max prepared by player/add_var_clamped.
 # ======================================================================================
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players set #ext_pv macroengine.tmp 0
 $execute if data storage macroengine:engine players.$(player).$(key) store result score #ext_pv macroengine.tmp run data get storage macroengine:engine players.$(player).$(key)
 

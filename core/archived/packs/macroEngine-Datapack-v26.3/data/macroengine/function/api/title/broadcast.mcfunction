@@ -18,8 +18,6 @@
 #   function macroengine:api/title/broadcast {title:"Server restart in 5 min",\
 #     subtitle:"Save your progress!",color:"red",sub_color:"yellow",\
 #     fade_in:20,stay:100,fade_out:20}$title @a times $(fade_in) $(stay) $(fade_out)
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{title:0b} run return 0
 $title @a title {"text":"$(title)","color":"$(color)"}
 $title @a subtitle {"text":"$(subtitle)","color":"$(sub_color)"}

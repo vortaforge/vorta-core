@@ -2,8 +2,6 @@
 # INPUT: $(ax), $(ay), $(az), $(bx), $(by), $(bz)
 
 # cx = ay*bz - az*by
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 $scoreboard players set $vcay macroengine.tmp $(ay)
 $scoreboard players set $vcbz macroengine.tmp $(bz)
 scoreboard players operation $vcay macroengine.tmp *= $vcbz macroengine.tmp

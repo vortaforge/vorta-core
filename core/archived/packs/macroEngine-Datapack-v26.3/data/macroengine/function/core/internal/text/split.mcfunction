@@ -4,8 +4,6 @@
 #          keep_empty (byte, optional, default 0b)
 # OUTPUT macroengine:text: out (list of strings)
 # RETURN number of entries in out. Splitting "" yields [""].
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:text err
 data modify storage macroengine:text out set value []
 execute unless data storage macroengine:text n run data modify storage macroengine:text n set value 0

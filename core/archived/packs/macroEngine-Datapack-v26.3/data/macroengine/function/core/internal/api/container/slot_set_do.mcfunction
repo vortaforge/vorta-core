@@ -1,7 +1,5 @@
 # macroengine:core/internal/api/container/slot_set_do [INTERNAL]
 # Body of api/container/slot_set (no module gate, so api/block can reuse it).
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:output container set value {ok:0b}
 execute unless data storage macroengine:input item.id run return 0
 execute unless data storage macroengine:input slot run return 0

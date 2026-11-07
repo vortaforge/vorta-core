@@ -1,7 +1,5 @@
 # macroengine:core/internal/text/ctl_loop [INTERNAL]
 # Pops the first character of cf and compares it with \n, \r and \t.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:text sc set string storage macroengine:text cf 0 1
 data modify storage macroengine:text cf set string storage macroengine:text cf 1
 data modify storage macroengine:text sq set from storage macroengine:text sc

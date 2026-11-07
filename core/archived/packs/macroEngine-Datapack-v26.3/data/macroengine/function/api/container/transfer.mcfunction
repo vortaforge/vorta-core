@@ -7,8 +7,6 @@
 # RETURN 1 when a stack was moved, else 0 (nothing to move, target full, bad input).
 # Whole stacks only: the stack is copied with the engine's own `item replace ... from block`, so
 # stack limits are never exceeded. It does not merge into partly filled stacks.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{container:0b} run return 0
 data modify storage macroengine:output container set value {ok:0b,moved:0b}
 execute unless data storage macroengine:input tx run return 0

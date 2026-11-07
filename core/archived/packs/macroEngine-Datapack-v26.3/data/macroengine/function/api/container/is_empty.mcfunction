@@ -2,8 +2,6 @@
 # Condition: does the container hold no items at all?
 # INPUT  macroengine:input x, y, z
 # RETURN 1 when it is a container with no items, else 0. macroengine:output container {ok}.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{container:0b} run return 0
 data modify storage macroengine:output container set value {ok:0b}
 execute unless function macroengine:core/internal/api/container/_addr run return 0

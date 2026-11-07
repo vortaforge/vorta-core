@@ -20,8 +20,6 @@
 #   execute if data storage macroengine:input_validate result{valid:1b} run ...
 # ======================================================================================
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:input_validate result
 data modify storage macroengine:input_validate result.valid set value 0b
 $execute unless data storage macroengine:input $(source) run data modify storage macroengine:input_validate result.error set value "no value"

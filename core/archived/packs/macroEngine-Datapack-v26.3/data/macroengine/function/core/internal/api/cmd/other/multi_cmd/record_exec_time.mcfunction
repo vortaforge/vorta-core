@@ -8,8 +8,6 @@
 # running total that show_stats reads.
 # ─────────────────────────────────────────────────────────────────
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute store result score $mcmd_exec_end macroengine.tmp run time query gametime
 
 scoreboard players operation $mcmd_exec_dur macroengine.tmp = $mcmd_exec_end macroengine.tmp

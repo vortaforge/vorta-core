@@ -1,6 +1,4 @@
 # macroengine:core/internal/text/find_loop [INTERNAL] one window comparison per call
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players operation #tx_a macroengine.tmp = #tx_i macroengine.tmp
 scoreboard players operation #tx_b macroengine.tmp = #tx_i macroengine.tmp
 scoreboard players operation #tx_b macroengine.tmp += #tx_nlen macroengine.tmp

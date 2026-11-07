@@ -2,8 +2,6 @@
 # INPUT  macroengine:text: s (string like "42", "-7", "3.14")
 # OUTPUT macroengine:text: out (int or double)   on failure: err, out unset
 # RETURN 1 on success, 0 on failure. Whole numbers are limited to 9 digits.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:text out
 data modify storage macroengine:text allow_dot set value 1b
 execute store result score #tx_ok macroengine.tmp run function macroengine:core/internal/text/num_check

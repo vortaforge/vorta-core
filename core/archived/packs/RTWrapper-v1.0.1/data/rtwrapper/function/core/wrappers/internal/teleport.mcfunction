@@ -1,8 +1,6 @@
 # RTWrapper generated named-parameter dispatcher for /teleport.
 # Provide contiguous parameters in this order:
 # target, x, y, z, rotation, facing_mode, facing_target, facing_anchor
-execute unless score #rtwrapper.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=rtwrapper.consented] unless score #rtwrapper.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players set #pc rtw.status 0
 execute if data storage rtwrapper:runtime current.params.target run scoreboard players set #pc rtw.status 1
 execute if data storage rtwrapper:runtime current.params.x run scoreboard players set #pc rtw.status 2

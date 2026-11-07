@@ -15,8 +15,6 @@
 # so players cannot escape regardless of client-side movement speed.
 # ─────────────────────────────────────────────────────────────────
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players operation $freeze_tp macroengine.tmp = @s macroengine.freeze_id
 execute as @a[tag=macroengine.frozen] if score @s macroengine.pid = $freeze_tp macroengine.tmp run teleport @s ~ ~ ~
 execute as @a[tag=macroengine.frozen] if score @s macroengine.pid = $freeze_tp macroengine.tmp run gamemode adventure @s

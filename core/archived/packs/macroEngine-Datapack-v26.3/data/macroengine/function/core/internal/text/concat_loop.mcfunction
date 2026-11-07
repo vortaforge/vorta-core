@@ -1,6 +1,4 @@
 # macroengine:core/internal/text/concat_loop [INTERNAL]
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless data storage macroengine:text cl[0] run return 1
 data modify storage macroengine:text s set string storage macroengine:text cl[0]
 data remove storage macroengine:text cl[0]

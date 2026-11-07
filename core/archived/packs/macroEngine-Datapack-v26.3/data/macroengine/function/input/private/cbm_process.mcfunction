@@ -11,8 +11,6 @@
 
 # Pending capture: if this entity is still pending, cbm_capture hasn't
 # released it yet (handler still running or never ran) — skip this tick.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if entity @s[tag=macroengine.cbm_pending] run return 0
 
 # Snapshot Command into temporary storage

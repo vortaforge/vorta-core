@@ -80,8 +80,17 @@ MODULES: list[tuple[str, list[str]]] = [
     # and only the engine areas (api-backed handlers, load, core libs) remain here.
     ("core", [
         "",
-        "core/",                        # dispatch, queue, state, config, lib, tick
-        "gate/",                        # load gate, consent, version
+        # `core/` is deliberately not a blanket prefix any more. It used to be,
+        # and that is what kept queue, state, config, cooldown and lib welded to
+        # the kernel. What is left in core is the tick spine and dispatch; the
+        # five libraries are their own modules below.
+        "core/tick/",
+        "core/tick.mcfunction",
+        "core/dispatch/",
+        # The engine's own scaffolding: the input-stack save/restore every macro
+        # caller uses, the scheduler, and the tick clock. Not a toolbox - the
+        # engine calls these itself, so they stay.
+        "core/runtime/",
         # Every implementation tree in the pack. This is the whole point: the
         # handlers, the per-feature implementations, the services. A module that
         # needs one calls it by id; none of them ship inside a module.
@@ -98,7 +107,7 @@ MODULES: list[tuple[str, list[str]]] = [
         # A feature module calls them the same way it calls any other core
         # function: by fully-qualified id.
         "systems/math/", "core/internal/systems/math/", "core/internal/math/",
-        "systems/string/", "core/internal/systems/string/",
+        "systems/string/", "core/internal/systems/string/", "core/internal/core/lib/",
         "core/internal/text/",          # the string library; `systems/text/` is a module
         "systems/rng/", "core/internal/systems/rng/", "core/internal/rng/",
         "systems/uuid/", "core/internal/systems/uuid/", "core/internal/uuid/",
@@ -173,6 +182,26 @@ MODULES: list[tuple[str, list[str]]] = [
     # they are published as the `core/internal/hook/*` implementation the module
     # and the core's tick driver both call.
     ("hook",      ["systems/hook/"]),
+
+    # --- the five that were welded to the kernel -------------------------
+    # These sat under `core/` and were core only because `core/` was a blanket
+    # prefix in the module table, not because the engine needed them:
+    #
+    #   state, cooldown   nothing outside their own tree calls them at all
+    #   queue             the work queue; core/lib/process_queue is the other half
+    #   config            read at tick; core checks for the module and skips it
+    #   lib               the general toolbox; the few calls the tick spine makes
+    #                     are guarded the same way
+    #
+    # The tick spine (`core/tick*`, `core/dispatch/`) stays in core and asks
+    # whether the module is installed before calling into it, so removing any of
+    # these five degrades behaviour instead of breaking boot. That is what makes
+    # them modules and not kernel.
+    ("config",   ["core/config/"]),
+    ("cooldown", ["core/cooldown/"]),
+    ("lib",      ["core/lib/"]),
+    ("state",    ["core/state/"]),
+    ("queue",    ["core/queue/"]),
 ]
 
 # Kept for the file-layout pass only. Nothing is module-owned any more: every
@@ -271,6 +300,17 @@ HOOK_CONTRIBUTIONS = [
     # `events` is a broken install - and "every module depends on core, never on
     # another module" is the rule the whole layout rests on.
     ("events_fire",          "events",      "events/fire"),
+    # The tick spine used to call these two directly, which is what kept config
+    # and lib welded to the kernel. Both are modules now, so core reaches them
+    # through a slot: installed, the slot runs the function exactly as before;
+    # absent, the slot is empty and the tick carries on with its defaults.
+    ("config_ensure",        "config",      "core/config/ensure"),
+    ("config_init",          "config",      "core/config/init"),
+    ("config_apply",         "config",      "core/config/apply"),
+    ("queue_process",        "lib",         "core/lib/process_queue"),
+    # The rest of core's calls into lib. Each was a direct call from an engine
+    # file into a function the lib module owns, which is what made lib
+    # unremovable. A slot per call site keeps every one of them optional.
 ]
 
 # ---------------------------------------------------------------------------

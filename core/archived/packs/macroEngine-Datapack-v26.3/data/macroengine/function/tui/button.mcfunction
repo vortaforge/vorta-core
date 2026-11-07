@@ -9,8 +9,6 @@
 # (the toggle buttons of api/toggle/show work the same way). fn is checked with
 # systems/validate/function_id before it reaches the macro line; label and hover stay in storage.
 # RETURN 1 when sent, 0 when an input is missing or fn is not a valid function id.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless data storage macroengine:tui in.fn run return 0
 data remove storage macroengine:validate in
 data modify storage macroengine:validate in.value set from storage macroengine:tui in.fn

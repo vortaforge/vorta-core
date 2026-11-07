@@ -2,8 +2,6 @@
 # Internal: checks one module. $(name) comes only from the constant list in checks/modules.
 # Codes: module.missing:<name>  module.invalid:<name>  module.mismatch:<name>
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 
 $execute unless data storage macroengine:engine modules.$(name) run data modify storage macroengine:output diagnostics.issues append value "module.missing:$(name)"
 $execute if data storage macroengine:engine modules{$(name):1b} run scoreboard players add #macroengine.dg_on macroengine.tmp 1

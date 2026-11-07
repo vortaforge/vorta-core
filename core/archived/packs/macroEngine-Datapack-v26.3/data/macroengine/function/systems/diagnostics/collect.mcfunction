@@ -26,8 +26,6 @@
 #   data get storage macroengine:output diagnostics.ok
 # ======================================================================================
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 
 data modify storage macroengine:output diagnostics set value {ok:1b,issue_count:0,notice_count:0,issues:[],notices:[],modules:{enabled:0,disabled:0},queue:{size:0,cap:0},audit:{count:0},log:{level:0,buffered:0}}
 scoreboard players set #macroengine.dg_on macroengine.tmp 0

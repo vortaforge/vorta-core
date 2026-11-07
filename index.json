@@ -8,9 +8,9 @@
     },
     "core": {
       "branch": "main",
-      "commit": "7f8b53479c427f66974c92fe1009149fc5969afa",
-      "files": 5276,
-      "bytes": 9870316
+      "commit": "0cd1902345496b8b26131ea49c8a1ef2e13233db",
+      "files": 5229,
+      "bytes": 9385226
     },
     "docs": {
       "branch": "main",
@@ -20,12 +20,12 @@
     },
     "macroengine-modules": {
       "branch": "main",
-      "commit": "2afc5c04129197c3b55f2e95aad12c780a94aba2",
+      "commit": "0e148648d2fd24de79594225444ae264fa4a5a88",
       "files": 26,
-      "bytes": 276788
+      "bytes": 281044
     }
   },
-  "mirrorsGeneratedAt": "2026-11-07T10:35:00.048743Z",
+  "mirrorsGeneratedAt": "2026-11-07T11:29:34.326811Z",
   "org": "vortaforge",
   "generatedAt": "2026-11-06T18:53:45.967857Z",
   "count": 5,

@@ -1,5 +1,3 @@
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 $execute store result score $cv macroengine.tmp run data get storage macroengine:engine players.$(player).$(key)
 $scoreboard players set $cv_mn macroengine.tmp $(min)
 $scoreboard players set $cv_mx macroengine.tmp $(max)

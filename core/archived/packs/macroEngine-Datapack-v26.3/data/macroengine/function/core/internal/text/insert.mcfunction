@@ -2,8 +2,6 @@
 # INPUT  macroengine:text: s, ins (strings), at (int, 0..length)
 # OUTPUT macroengine:text: out (string)   on failure: err, out unset
 # RETURN 1 on success, 0 on failure. s and ins must not contain a quote or backslash.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:text err
 data remove storage macroengine:text out
 execute unless data storage macroengine:text at run data modify storage macroengine:text at set value 0

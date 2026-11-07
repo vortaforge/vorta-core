@@ -22,6 +22,21 @@
       "returns": false,
       "empty": false
     },
+    "config_apply": {
+      "tag": "me_core_module:hook/config_apply",
+      "returns": false,
+      "empty": false
+    },
+    "config_ensure": {
+      "tag": "me_core_module:hook/config_ensure",
+      "returns": false,
+      "empty": false
+    },
+    "config_init": {
+      "tag": "me_core_module:hook/config_init",
+      "returns": false,
+      "empty": false
+    },
     "events_fire": {
       "tag": "me_core_module:hook/events_fire",
       "returns": false,
@@ -87,6 +102,11 @@
       "returns": false,
       "empty": true
     },
+    "queue_process": {
+      "tag": "me_core_module:hook/queue_process",
+      "returns": false,
+      "empty": false
+    },
     "tick": {
       "tag": "me_core_module:hook/tick",
       "returns": false,
@@ -109,7 +129,7 @@
       "namespace": "me_core_module",
       "modId": "macroengine-core",
       "pack": "packs/me_core_module",
-      "files": 1035,
+      "files": 911,
       "hooks": {},
       "publishes": []
     },
@@ -418,8 +438,67 @@
         ]
       },
       "publishes": []
+    },
+    {
+      "name": "config",
+      "namespace": "me_config_module",
+      "modId": "macroengine-config",
+      "pack": "packs/me_config_module",
+      "files": 12,
+      "hooks": {
+        "config_ensure": [
+          "me_config_module:core/config/ensure"
+        ],
+        "config_init": [
+          "me_config_module:core/config/init"
+        ],
+        "config_apply": [
+          "me_config_module:core/config/apply"
+        ]
+      },
+      "publishes": []
+    },
+    {
+      "name": "cooldown",
+      "namespace": "me_cooldown_module",
+      "modId": "macroengine-cooldown",
+      "pack": "packs/me_cooldown_module",
+      "files": 12,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "lib",
+      "namespace": "me_lib_module",
+      "modId": "macroengine-lib",
+      "pack": "packs/me_lib_module",
+      "files": 53,
+      "hooks": {
+        "queue_process": [
+          "me_lib_module:core/lib/process_queue"
+        ]
+      },
+      "publishes": []
+    },
+    {
+      "name": "state",
+      "namespace": "me_state_module",
+      "modId": "macroengine-state",
+      "pack": "packs/me_state_module",
+      "files": 11,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "queue",
+      "namespace": "me_queue_module",
+      "modId": "macroengine-queue",
+      "pack": "packs/me_queue_module",
+      "files": 6,
+      "hooks": {},
+      "publishes": []
     }
   ],
-  "totalFiles": 1559,
+  "totalFiles": 1529,
   "unmapped": []
 }

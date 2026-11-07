@@ -2,8 +2,6 @@
 # Internal — called by api/color/validate.
 # Sets macroengine:output result to 1b if $(color) is a known named color,
 # or if it begins with "#" (hex shorthand detection).
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 $execute if data storage macroengine:engine color._names.$(color) run data modify storage macroengine:output result set value 1b
 
 # Hex shorthand: valid if the string is non-empty and its first character is "#".

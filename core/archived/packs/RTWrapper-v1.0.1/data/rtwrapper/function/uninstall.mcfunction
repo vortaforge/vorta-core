@@ -4,8 +4,6 @@
 # and no-op on missing scoreboards/storage).
 
 # Announce before state is torn down, since the debug gate itself is about to be removed.
-execute unless score #rtwrapper.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=rtwrapper.consented] unless score #rtwrapper.gate.3 vortaforge.gate matches 0 run return 0
 execute if score #debug rtw.config matches 1.. run tellraw @a[tag=rtwrapper.debug] [{"text":"[RTWrapper] uninstalling: clearing storage and scoreboards","color":"gray"}]
 
 # Drop storage roots owned by RTWrapper. `data remove storage <id>` with no path is

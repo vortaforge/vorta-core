@@ -14,8 +14,6 @@
 # ─────────────────────────────────────────────────────────────────
 
 # Roll a random integer in [0, max] using the 1.20.2+ /random command
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 $execute store result score $rnd_pick macroengine.tmp run random value 0..$(max)
 
 # Dispatch: run func as the entity whose index was rolled

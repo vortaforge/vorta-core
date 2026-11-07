@@ -13,8 +13,6 @@
 # - Both x and y zero → result = 0
 # - Result matches standard math convention (CCW from +X axis)
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $a2_y macroengine.tmp $(y)
 $scoreboard players set $a2_x macroengine.tmp $(x)

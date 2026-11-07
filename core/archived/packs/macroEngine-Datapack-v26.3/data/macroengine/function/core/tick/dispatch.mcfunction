@@ -8,8 +8,6 @@
 # hud_systems: every config.hud_rate engine ticks (default 2)
 # admin_systems: every config.admin_rate engine ticks (default 4)
 # The rates are set by core/config/apply from macroengine:engine config.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players add #tick_ctr macroengine.tick 1
 
 execute unless score #sys_time macroengine.tick_flags matches 0 run function macroengine:core/tick/time_systems

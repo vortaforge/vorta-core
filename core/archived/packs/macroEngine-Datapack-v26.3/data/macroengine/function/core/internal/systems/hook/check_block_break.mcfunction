@@ -9,8 +9,6 @@
 # Hand-breaking (cobweb, snow, leaves) is not detectable in 1.20.3–26.1+
 # via advancement triggers. Tool-based breaking only.
 # Mob hits also trigger item_durability_changed (sword, axe, etc.).
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless score @s macroengine.hook_tool_used matches 1.. run return 0
 function macroengine:core/internal/systems/hook/on_block_break
 scoreboard players set @s macroengine.hook_tool_used 0

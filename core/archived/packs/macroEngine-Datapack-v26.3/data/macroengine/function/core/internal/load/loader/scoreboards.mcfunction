@@ -1,9 +1,7 @@
 # macroengine:core/internal/load/loader/scoreboards
 # (moved from macroengine:core/internal/load/load/scoreboards in v26.3 — load/ vs loader/
-#  separates gate/confirmation logic from the actual init routines)
+#  separates the loader bookkeeping from the actual init routines)
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 
 scoreboard objectives add macroengine.tmp dummy
 scoreboard objectives add macroengine.anvil_t dummy

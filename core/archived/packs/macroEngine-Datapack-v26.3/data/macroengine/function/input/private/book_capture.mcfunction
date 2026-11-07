@@ -16,8 +16,6 @@
 # ======================================================================================
 
 # Already captured this hold-session — keep book, skip re-fire
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if entity @s[tag=macroengine.book_captured] run return 0
 
 data modify storage macroengine:input book.player set from entity @s UUID

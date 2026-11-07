@@ -2,8 +2,6 @@
 # tags and one-shot event hooks.
 
 # Movement counters -> tags
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if score @s player_action.fly matches 1.. run tag @s add player_action.flying
 execute if score @s player_action.walk matches 1.. run tag @s add player_action.walking
 execute if score @s player_action.fall matches 1.. run tag @s add player_action.falling

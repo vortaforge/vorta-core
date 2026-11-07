@@ -9,8 +9,6 @@
 # characters come from the deny_tag table via core/internal/text/scan_deny, which looks at
 # one character at a time and never substitutes the input as a whole into a command.
 # ======================================================================================
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute store result score #macroengine.Len macroengine.tmp run data get storage macroengine:input_validate scratch.value
 execute if score #macroengine.Len macroengine.tmp matches 0 run data modify storage macroengine:input_validate result.error set value "empty input"
 execute if score #macroengine.Len macroengine.tmp matches 0 run return 0

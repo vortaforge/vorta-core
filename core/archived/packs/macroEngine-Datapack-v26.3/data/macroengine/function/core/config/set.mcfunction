@@ -11,8 +11,6 @@
 # Usage:
 #   data modify storage macroengine:engine config_in set value {key:"hud_rate",value:5}
 #   function macroengine:core/config/set
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless data storage macroengine:engine config_in.value run return 0
 execute unless data storage macroengine:engine config_in.key run return 0
 data remove storage macroengine:validate in

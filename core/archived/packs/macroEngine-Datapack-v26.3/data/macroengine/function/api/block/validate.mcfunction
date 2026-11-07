@@ -3,8 +3,6 @@
 # INPUT  macroengine:input id, x, y, z, slot (optional), item (optional), op ("insert" default,
 #        "take", "hopper_in", "hopper_out")
 # OUTPUT macroengine:output block {ok, denied}   RETURN 1 allowed, 0 denied or refused.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{block:0b} run return 0
 data modify storage macroengine:output block set value {ok:0b,denied:0b}
 data modify storage macroengine:block tmp set value {m:{op:"insert"}}

@@ -1,6 +1,6 @@
 {
   "files": 26,
-  "bytes": 276788,
+  "bytes": 281044,
   "symlinksDropped": 0,
   "paths": [
     ".github/workflows/ci.yml",
@@ -32,6 +32,6 @@
   ],
   "repo": "vortaforge/macroengine-modules",
   "branch": "main",
-  "commit": "2afc5c04129197c3b55f2e95aad12c780a94aba2",
+  "commit": "0e148648d2fd24de79594225444ae264fa4a5a88",
   "note": "Snapshot of the default branch. Read-only: do not edit here."
 }

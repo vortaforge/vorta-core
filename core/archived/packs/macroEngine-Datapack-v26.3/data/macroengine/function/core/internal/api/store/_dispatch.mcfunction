@@ -1,7 +1,5 @@
 # macroengine:core/internal/api/store/_dispatch [INTERNAL]
 # Sets tmp.val from tmp.nm, or leaves it unset when the token is unknown.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:store tmp{nm:"nl"} run data modify storage macroengine:store tmp.val set value "\n"
 execute if data storage macroengine:store tmp{nm:"percent"} run data modify storage macroengine:store tmp.val set value "%"
 execute unless data storage macroengine:engine config{store_tok_player:0b} if data storage macroengine:store tmp{nm:"player"} run function macroengine:core/internal/api/store/_player_name

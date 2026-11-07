@@ -6,8 +6,6 @@
 # We remove from the front until hits[0].t >= prune_before (or array empty).
 # This is O(expired_count) — optimal for a FIFO sliding window.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 $execute unless data storage macroengine:engine rate_limit.rules.$(rule_key).hits[0] run return 0
 
 # Read oldest hit timestamp

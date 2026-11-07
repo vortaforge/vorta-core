@@ -16,8 +16,6 @@
 #   data modify storage macroengine:title in set value {title:"Welcome %player%",subtitle:"Coins: %score:coins%"}
 #   function macroengine:api/title/show_p
 #   (to address another player:  execute as Steve run function macroengine:api/title/show_p)
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{title:0b} run return 0
 execute unless data storage macroengine:title in.fade_in run data modify storage macroengine:title in.fade_in set from storage macroengine:engine config.title_fade_in
 execute unless data storage macroengine:title in.fade_in run data modify storage macroengine:title in.fade_in set value 10

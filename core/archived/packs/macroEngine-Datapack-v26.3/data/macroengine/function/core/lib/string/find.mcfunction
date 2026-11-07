@@ -5,8 +5,6 @@
 # Output: macroengine:output string.result — list of start indices, or [-1] if not found
 # Dep:    macroengine:core/internal/text (in-house)
 # Note:   no match (or an empty find string) gives [-1]
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:text s set from storage macroengine:input string
 data modify storage macroengine:text needle set from storage macroengine:input find
 data remove storage macroengine:text n

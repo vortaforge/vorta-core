@@ -4,8 +4,6 @@
 # text_display resolves a selector that points at the executor (via a tag, because @s inside the
 # display would be the display itself). The result is read back and reduced to a string at once;
 # the component is never kept. A bare string, {text:"..."} and the team form (name in extra[1]) are handled.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless entity @s[type=player] run return 0
 tag @s add macroengine.pn_subject
 summon text_display ~ ~ ~ {Tags:["macroengine.pn_display"]}

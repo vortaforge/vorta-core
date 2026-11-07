@@ -5,9 +5,9 @@
 #
 # Caveats for the best-guess vanilla equivalents used below:
 #   - "schedule clear <fn>" cancels the sync_tick schedule set via
-#     core/lib/schedule — correct IF that lib wraps vanilla `schedule function`.
+#     core/runtime/schedule — correct IF that lib wraps vanilla `schedule function`.
 #     If it uses its own queue/storage instead, this line does nothing and the
-#     entry must be cleared from wherever core/lib/schedule actually tracks it.
+#     entry must be cleared from wherever core/runtime/schedule actually tracks it.
 #   - There's no known macroengine:core/internal/systems/uuid/cleanup or
 #     macroengine:systems/color/cleanup counterpart to the two `function` calls
 #     in storages.mcfunction — left as comments, not invented calls.
@@ -20,8 +20,6 @@
 # it's undone by dropping the storage that held the pids (player_pids /
 # _pid_seq), further down where loader/storages is reversed.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 tag @s remove macroengine.admin
 
 # text module: working buffers and lookup tables
@@ -38,7 +36,7 @@ execute if score #sys_time macroengine.tick_flags matches 1.. run scoreboard pla
 scoreboard players reset @a[tag=macroengine.admin] macroengine_action
 scoreboard players reset @a[tag=macroengine.admin] macroengine_run
 
-schedule clear macroengine:core/lib/sync_tick
+schedule clear macroengine:core/runtime/sync_tick
 
 forceload remove 0 0
 

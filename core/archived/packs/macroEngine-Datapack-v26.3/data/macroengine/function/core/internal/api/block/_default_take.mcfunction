@@ -1,8 +1,6 @@
 # macroengine:core/internal/api/block/_default_take [INTERNAL]
 # Default take: removes the stack of macroengine:input slot (default: first occupied slot) and
 # writes it to macroengine:output block.item.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless data storage macroengine:container tmp.k.slot run function macroengine:core/internal/api/container/_src_first with storage macroengine:container tmp.k
 execute unless data storage macroengine:container tmp.k.slot run return 0
 data modify storage macroengine:input slot set from storage macroengine:container tmp.k.slot

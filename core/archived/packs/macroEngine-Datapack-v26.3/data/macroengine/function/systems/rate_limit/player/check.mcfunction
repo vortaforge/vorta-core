@@ -12,8 +12,6 @@
 # Output → macroengine:output result 1b=ALLOWED 0b=DENIED
 
 # Auto-seed: if bucket for this player+key doesn't exist, create from template
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{rate_limit:0b} run return 0
 $execute unless data storage macroengine:engine "rate_limit.rules.player:$(key):$(player)" run function macroengine:core/internal/systems/rate_limit/player/ensure {tpl:"$(key)",full:"player:$(key):$(player)"}
 

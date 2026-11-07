@@ -1,8 +1,6 @@
 # macroengine:core/internal/systems/cb/time_left_step [INTERNAL]
 # Pops the first entry of _cb_twork (a read-only copy of cb_queue). When its id == #cb_cid,
 # counts it in #cb_tcount and keeps the smallest ticks_left in #cb_tmin (-1 = none yet).
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:engine _cb_tentry set from storage macroengine:engine _cb_twork[0]
 data remove storage macroengine:engine _cb_twork[0]
 scoreboard players set #cb_eid macroengine.tmp 0

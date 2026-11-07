@@ -1,7 +1,7 @@
 # macroengine:core/internal/load/loader/storages
 # Initializes macroengine:engine storage fields that do not yet exist.
 # (moved from macroengine:core/internal/load/load/storages in v26.3 — load/ vs loader/
-#  separates gate/confirmation logic from the actual init routines)
+#  separates the loader bookkeeping from the actual init routines)
 #
 # AI-ASSISTED FIX (Claude, Anthropic): added the missing 'storage' keyword to the
 # queue / region_watches / batches / cb_queue guards (Spyglass lint errors) and
@@ -33,8 +33,6 @@
 #   (b) was cleaned up via core/internal/load/cleanup (cleanup removed global).
 # In both cases, initializing with 'unless data' guards is safe.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless score $epoch macroengine.time matches -2147483648..2147483647 run scoreboard players set $epoch macroengine.time 0
 scoreboard players set $tick macroengine.tmp 0
 

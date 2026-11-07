@@ -1,6 +1,4 @@
 # macroengine:core/config/_set_int [MACRO, INTERNAL]  $(key) is a schema key; value is clamped to min..max
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute store result score #cfg_in macroengine.tmp run data get storage macroengine:engine config_in.value
 execute store result score #cfg_min macroengine.tmp run data get storage macroengine:engine config_sc.min
 execute store result score #cfg_max macroengine.tmp run data get storage macroengine:engine config_sc.max

@@ -3,8 +3,6 @@
 # Issue:   engine.not_loaded
 # Notices: tick.paused_storage  tick.paused_config  log.debug_level  audit.buffer_full
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 
 execute unless data storage macroengine:engine global{loaded:1b} run data modify storage macroengine:output diagnostics.issues append value "engine.not_loaded"
 execute if data storage macroengine:engine tick{paused:1b} run data modify storage macroengine:output diagnostics.notices append value "tick.paused_storage"

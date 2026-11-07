@@ -14,8 +14,6 @@
 # itself (see https://minecraft.wiki/w/Commands/data). Every top-level
 # key ever written to rl_work across check/evaluate/prune must be listed
 # here explicitly: ensure_key, rule, prune_before, rule_key, new_hit.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:rl_work ensure_key
 data remove storage macroengine:rl_work rule
 data remove storage macroengine:rl_work prune_before

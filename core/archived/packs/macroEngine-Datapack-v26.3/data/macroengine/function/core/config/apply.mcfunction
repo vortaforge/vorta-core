@@ -14,8 +14,6 @@
 #   perm_enforce, perm_cmd -> #perm_enforce, #perm_cmd (macroengine.tick_flags; read by api/perm/require, api/perm/check, api/cmd/*)
 # The store_*, title_*, validate_max_name and reload_warn keys are read straight from storage.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:engine modules.cb set from storage macroengine:engine config.module_cb
 data modify storage macroengine:engine modules.cmd set from storage macroengine:engine config.module_cmd
 data modify storage macroengine:engine modules.color set from storage macroengine:engine config.module_color

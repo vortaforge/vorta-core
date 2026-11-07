@@ -2,8 +2,6 @@
 # INPUT  macroengine:text: s, needle, rep (strings), n (int, optional: 0 all, +n first n, -n last n)
 # OUTPUT macroengine:text: out (string)   on failure: err, out unset
 # RETURN number of replacements. s and rep must not contain a quote or backslash.
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data remove storage macroengine:text err
 data remove storage macroengine:text out
 execute unless data storage macroengine:text n run data modify storage macroengine:text n set value 0

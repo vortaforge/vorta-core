@@ -7,8 +7,6 @@
 # Implementation: static dispatch to internal/repeat_N which sets the literal string.
 # Each internal file uses a single $data modify line with N $(char) expansions.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{string:0b} run return 0
 data modify storage macroengine:output result set value ""
 

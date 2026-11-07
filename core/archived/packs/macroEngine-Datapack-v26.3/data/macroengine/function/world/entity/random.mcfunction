@@ -17,8 +17,6 @@
 # ─────────────────────────────────────────────────────────────────
 
 # Step 1 — count all matching entities
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard players set $rnd_n macroengine.tmp 0
 $execute as @e[type=$(type),tag=$(tag)] run scoreboard players add $rnd_n macroengine.tmp 1
 

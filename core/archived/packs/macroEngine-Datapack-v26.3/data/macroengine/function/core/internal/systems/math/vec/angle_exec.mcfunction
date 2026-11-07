@@ -2,9 +2,7 @@
 # INPUT: $(ax), $(ay), $(az), $(bx), $(by), $(bz)
 # RULE: Lines without $(var) must NOT have a $ prefix.
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
-function macroengine:core/lib/input_push
+function macroengine:core/runtime/input_push
 
 $data modify storage macroengine:engine _vec_dot_tmp ax set value $(ax)
 $data modify storage macroengine:engine _vec_dot_tmp ay set value $(ay)
@@ -30,7 +28,7 @@ $data modify storage macroengine:engine _math_d3d_tmp z2 set value $(bz)
 function macroengine:systems/math/distance3d with storage macroengine:engine _math_d3d_tmp
 execute store result score $vang_lb macroengine.tmp run data get storage macroengine:output result
 
-function macroengine:core/lib/input_pop
+function macroengine:core/runtime/input_pop
 
 data modify storage macroengine:output result set value 0
 
