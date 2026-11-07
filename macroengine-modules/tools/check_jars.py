@@ -72,29 +72,49 @@ def problems_for(jar: Path) -> list[str]:
         # Fabric aborts the launch when it is not, so this is the check that
         # decides whether the game starts at all.
         #
-        # The class may be in the jar itself or in a nested jar under
-        # META-INF/jars/ - Fabric extracts those and loads them, which is how one
-        # shared entry point serves all 26 mods. Both are checked, because the
-        # failure mode is identical either way.
+        # The class may be in the jar itself or in a jar nested inside it. Nested
+        # jars are found the way the loader finds them - through the `jars` array
+        # in the manifest - and NOT by looking in META-INF/jars/. That directory
+        # is a convention; ModDiscoverer only opens what `jars` lists. Getting
+        # this wrong in the build shipped a mod whose entrypoint did not exist.
         entrypoints = meta.get("entrypoints", {}).get("main", [])
         if not entrypoints:
             found.append(f"{jar.name}: no `main` entrypoint")
-        nested = [n for n in names if n.startswith("META-INF/jars/") and n.endswith(".jar")]
+
+        declared = []
+        for entry in meta.get("jars", []):
+            rel = entry.get("file") if isinstance(entry, dict) else None
+            if not rel:
+                found.append(f"{jar.name}: a `jars` entry has no `file`")
+                continue
+            if rel not in names:
+                found.append(f"{jar.name}: `jars` declares {rel} but the jar does "
+                             f"not contain it - the loader will fail to open it")
+                continue
+            declared.append(rel)
+
         for entry in entrypoints:
             path = entry.replace(".", "/") + ".class"
             if path in names:
                 continue
-            if any(class_in_nested(archive, n, path) for n in nested):
+            if any(class_in_nested(archive, n, path) for n in declared):
                 continue
             found.append(
                 f"{jar.name}: entry point {entry} is declared but {path} is in "
-                f"neither the jar nor any of its {len(nested)} nested jar(s)")
+                f"neither the jar nor any of its {len(declared)} declared nested "
+                f"jar(s)")
 
-        # A nested jar is only useful to Fabric if it is a real jar with the class
-        # in it; an empty META-INF/jars/ entry looks correct and does nothing.
-        if not nested:
-            found.append(f"{jar.name}: no META-INF/jars/ - the declared entry point "
-                         f"cannot be resolved unless the class is in this jar")
+        # A nested jar that is present but undeclared is the exact bug this caught
+        # in production: the file is in the archive, looks right to a human, and
+        # the loader never opens it.
+        present = [n for n in names
+                   if n.endswith(".jar") and n != "fabric.mod.json"
+                   and not n.startswith("META-INF/")]
+        for loose in present:
+            if loose not in declared:
+                found.append(f"{jar.name}: {loose} is in the jar but not listed in "
+                             f"`jars` - Fabric will never open it, so anything it "
+                             f"contains (an entry point class) does not exist")
 
         # A mod without its data is a mod that does nothing.
         if "pack.mcmeta" not in names:

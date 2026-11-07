@@ -151,16 +151,20 @@ jobs:
         # verify.py is green, and the layout is not what anyone reviewed.
         run: python3 tools/check_shape.py
 
+      - name: Assert every pack reference resolves
+        # A pack may reference an id the split failed to rewrite. The game will
+        # either refuse the pack at load time or silently never run the function,
+        # and it says so only when the server starts. This says it here.
+        run: python3 tools/check_refs.py packs
+
+      - name: Prove the reference checker can fail
+        # The checker is the thing standing between a renamed id and a server that
+        # will not boot. If it silently goes blind it passes everything, so it is
+        # tested against each id shape that has actually broken a release.
+        run: python3 tools/test_check_refs.py
+
       - name: Build every pack
         run: ./gradlew --no-daemon --console=plain check dist
-
-      - name: Assert every jar is a loadable Fabric mod
-        # The bug this exists for: 26 jars were produced with no fabric.mod.json
-        # in any of them. They were data pack jars, so a mod loader ignored them,
-        # and the build was green. `dist` already runs this via checkJars; running
-        # it again here makes the failure its own named step instead of a line in
-        # the build log.
-        run: python3 tools/check_jars.py --dist build/dist
 
       - name: Summarise
         if: always()

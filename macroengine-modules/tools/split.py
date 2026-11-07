@@ -387,43 +387,153 @@ FUNCTION_REF = re.compile(r"((?<![\w:])run function |(?<![\w:])function )(#?)([a
 REGISTRY_REF = re.compile(
     r"(?P<lead>"
     r"(?:(?<![\w])predicate=!?)"
+    # `execute if predicate <id>` - the command form.
+    r"|(?:\bif predicate )"
+    r"|(?:\bunless predicate )"
+    # `dialog show <target> <id>` - 26.x, the id is positional.
+    r"|(?:\bdialog show [^\s]+ )"
     r"|(?:\bloot )"
-    r"|(?:\badvancement )"
+    # `advancement grant|revoke <targets> [criterion] <id>` - the id is the
+    # last token, and `only <criterion>` may sit in front of it, so match the
+    # whole tail rather than just the keyword.
+    r"|(?:\badvancement (?:grant|revoke) [^\n]*?\s)"
     r"|(?:\"parent\"\s*:\s*\")"
     r"|(?:\"function\"\s*:\s*\")"
     r"|(?:\"loot_table\"\s*:\s*\")"
     r"|(?:\"predicate\"\s*:\s*\")"
     r"|(?:\"recipe\"\s*:\s*\")"
+    # `{func:"ns:path"}` - an SNBT payload naming the next function to run (the
+    # engine's own queue and fibers use this). It is an id the game resolves, so it
+    # has to move with the rest.
+    r"|(?:\{?\bfunc\s*:\s*\")"
+    # `schedule clear <id>` / `schedule function <id> <time>`.
+    r"|(?:\bschedule (?:clear|function) )"
+    # A bare double-quoted id in SNBT, e.g. `data modify ... value "ns:path"` -
+    # the engine stores the next function to call as a string.
+    r"|(?:\")(?=[a-z0-9_.-]+:)"
+    # 26.x dialogs are a registry of their own, and a dialog may open another one
+    # by id (`{"type": "minecraft:show_dialog", "dialog": "..."}`). Missing this
+    # key shipped a pack that pointed at a namespace the split had just renamed,
+    # and the server refused to load: "Unbound values ... minecraft:dialog:
+    # [macroengine:gate/confirm]".
+    r"|(?:\"dialog\"\s*:\s*\")"
     r")(?P<id>[a-z0-9_.-]+:[a-z0-9_/.-]+)")
 
 
 def rewrite_registry_refs(text: str, mapping: dict[str, str]) -> str:
+    # The source pack has ids whose path is simply wrong: `events/fire_queued`
+    # schedules `macroengine:events/internal/fire_deferred`, but that file lives at
+    # `core/internal/events/fire_deferred`. Two segments are transposed and no
+    # mapping key covers the id.
+    #
+    # When exactly one file in the whole split has the same leaf name, that file is
+    # what the reference meant, and using it is not a guess. When the leaf is
+    # ambiguous it is left alone: a wrong target is worse than a visible miss.
+    by_leaf: dict[str, list[str]] = {}
+    for old_id, new_id in mapping.items():
+        by_leaf.setdefault(old_id.rsplit("/", 1)[-1], []).append(new_id)
+
     def sub(match: re.Match[str]) -> str:
-        return match.group("lead") + mapping.get(match.group("id"), match.group("id"))
+        ident = match.group("id")
+        if ident in mapping:
+            return match.group("lead") + mapping[ident]
+        candidates = by_leaf.get(ident.rsplit("/", 1)[-1], [])
+        if len(candidates) == 1:
+            return match.group("lead") + candidates[0]
+        return match.group("lead") + ident
+
     return REGISTRY_REF.sub(sub, text)
 
 
 # A reference built by a macro expands at runtime, so its target cannot be known
 # statically. It is rewritten to the caller's own namespace and reported, because
 # guessing a target would be worse than saying "this one needs a human".
-MACRO_REF = re.compile(r"((?<![\w:])run function |(?<![\w:])function )(#?)([a-z0-9_.-]+:[a-z0-9_/.-]*)\$")
+# The verbs whose last argument is an id that a macro may complete. `function` and
+# `advancement grant|revoke` are the two the pack uses; the tail is matched loosely
+# because `advancement` carries a target selector and an optional `only` in between.
+MACRO_REF = re.compile(
+    r"((?<![\w:])run function |(?<![\w:])function"
+    r"|\badvancement (?:grant|revoke) [^\n]*?only "
+    r"|\badvancement (?:grant|revoke) [^\n]*?\s)"
+    r"(#?)([a-z0-9_.-]+:[a-z0-9_/.-]*)\$")
 
 
-def rewrite_references(text: str, mapping: dict[str, str], *, self_ns: str,
-                       macros: list[str], where: str) -> str:
-    def sub_function(match: re.Match[str]) -> str:
-        verb, hashmark, ident = match.group(1), match.group(2), match.group(3)
-        return verb + hashmark + mapping.get(ident, ident)
+def rewrite_macro_refs(text: str, mapping: dict[str, str], *, macros: list[str],
+                       where: str, module_ns: str) -> tuple[str, list[str]]:
+    """Rewrite the static part of an id that ends in a macro expansion.
 
-    def sub_macro(match: re.Match[str]) -> str:
+    `function macroengine:api/cmd/$(type)` names a *directory* literally - the
+    directory exists, only the leaf is decided at runtime. The namespace and the
+    whole leading path are static, so they go through the mapping like any other
+    id; `$(type)` stays put.
+
+    Replacing the prefix by the caller's own namespace would be a guess. This
+    resolves the longest static prefix that the mapping actually knows, so the
+    rewrite follows the file that the directory holds.
+
+    Returns the rewritten text and the list of macros that could NOT be resolved
+    (no static prefix and no directory above them in the mapping); those are the
+    ones a human has to look at, and they are reported rather than guessed.
+    """
+    unresolved: list[str] = []
+
+    # Longest-id-first, and every static id in the mapping that starts with a
+    # candidate means that candidate is a *directory* the mapping knows about.
+    by_length = sorted(mapping.items(), key=lambda kv: -len(kv[0]))
+
+    for match in reversed(list(MACRO_REF.finditer(text))):
         verb, hashmark, prefix = match.group(1), match.group(2), match.group(3)
-        macros.append(f"{where}: {prefix}$(…)")
-        new_ns = module_namespace(self_ns[:0] or "")  # placeholder, replaced below
-        return verb + hashmark + prefix + "$"
+        # `prefix` is everything before the first `$`, e.g. `macroengine:api/cmd/`.
+        # Find the longest id whose new home starts with the same path, which is
+        # the directory holding whatever the macro will pick.
+        # Only ids that sit *directly* in that directory say where the directory
+        # moved to. `macroengine:api/cmd/actionbar` -> `me_cmd_module:cmd/actionbar`
+        # means the directory `macroengine:api/cmd/` is now `me_cmd_module:cmd/`.
+        # Taking the longest id that merely starts with the prefix would instead
+        # pick the deepest file (`.../multi_cmd/utils/x`) and invent a directory
+        # that is not the one being named.
+        resolved = None
+        for old_id, new_id in mapping.items():
+            if not old_id.startswith(prefix):
+                continue
+            if "/" in old_id[len(prefix):]:
+                continue                      # a file in a subdirectory, not here
+            if "/" not in new_id:
+                continue                      # the mapping flattened it; unusable
+            resolved = new_id.rsplit("/", 1)[0] + "/"
+            break
 
-    text = MACRO_REF.sub(sub_macro, text)
-    text = FUNCTION_REF.sub(sub_function, text)
-    return text
+        # The directory may be one the mapping has no file directly under, in
+        # which case only the namespace is known. `old_ns:rest` -> the module that
+        # owns `rest`, taken from any id that shares it.
+        if resolved is None:
+            ns, sep, rest = prefix.partition(":")
+            for old_id, new_id in by_length:
+                if old_id.startswith(f"{ns}:{rest}"):
+                    owner_ns = new_id.split(":", 1)[0]
+                    resolved = f"{owner_ns}:{rest}"
+                    break
+
+        if resolved is None:
+            # Nothing static below the namespace is known. The caller's own
+            # namespace always exists, and a reference of this shape points into
+            # the caller's own tree. It is reported either way: the target is data,
+            # so only a reader can confirm the namespace is the right one.
+            ns, sep, rest = prefix.partition(":")
+            if ns == OLD_NAMESPACE and sep:
+                unresolved.append(
+                    f"{where}: {prefix}$(…) - leaf is data; namespace moved to "
+                    f"{module_ns}, target unverified")
+                replacement = verb + hashmark + module_ns + ":" + rest + "$"
+            else:
+                unresolved.append(f"{where}: {prefix}$(…)")
+                replacement = verb + hashmark + prefix
+        else:
+            replacement = verb + hashmark + resolved + "$"
+        text = text[:match.start()] + replacement + text[match.end():]
+
+    macros.extend(unresolved)
+    return text, unresolved
 
 
 DEFAULT_MC_FUNCTION = {"load", "tick"}
@@ -442,8 +552,8 @@ def rewrite_json(obj, mapping: dict[str, str]):
             # Other registries the pack ships. `parent` is an advancement id,
             # `loot_table`/`predicate`/`recipe` are their own registries - all are
             # resolved by the game and all live under the same old namespace.
-            elif k in ("parent", "loot_table", "predicate", "recipe", "item_modifier") \
-                    and isinstance(v, str):
+            elif k in ("parent", "loot_table", "predicate", "recipe", "item_modifier",
+                       "dialog") and isinstance(v, str):
                 out[k] = _rewrite_id(v, mapping)
             else:
                 out[k] = rewrite_json(v, mapping)
@@ -640,7 +750,7 @@ class Split:
             dest.parent.mkdir(parents=True, exist_ok=True)
             if path.suffix == ".mcfunction":
                 text = path.read_text(encoding="utf-8")
-                text = self._rewrite(text, rel)
+                text = self._rewrite(text, rel, module)
                 if module == "core":
                     # Only the core pack is barred from naming modules. Inside a
                     # module a direct call to a sibling is fine as long as the
@@ -839,12 +949,12 @@ class Split:
                 (tags_dir / f"{slot}.json").write_text(json.dumps(body, indent=2) + "\n",
                                                        encoding="utf-8")
 
-    def _rewrite(self, text: str, where: str) -> str:
-        # A macro id cannot be resolved statically; it is left alone and reported.
-        def note(match: re.Match[str]) -> str:
-            self.macros.append(f"{where}: {match.group(3)}$(…) - expands at runtime")
-            return match.group(0)
-        text = MACRO_REF.sub(note, text)
+    def _rewrite(self, text: str, where: str, where_module: str = "core") -> str:
+        # A macro id's leaf is chosen at runtime, but everything in front of the
+        # `$` is static and has to move with the rest. Only the part that genuinely
+        # cannot be resolved is reported.
+        text, _ = rewrite_macro_refs(text, self.mapping, macros=self.macros,
+                                     where=where, module_ns=module_namespace(where_module))
 
         def sub(match: re.Match[str]) -> str:
             verb, hashmark, ident = match.group(1), match.group(2), match.group(3)

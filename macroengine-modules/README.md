@@ -103,6 +103,35 @@ is free to retire.
 The `data/` layout is identical to a `datapacks/` folder, so the same jar also
 works there, with no mod loader at all.
 
+### What is checked, and why
+
+`tools/verify.py` answers "is the module graph sound": references resolve, no
+module reaches into another's internals, core never names a module, no cycles.
+
+`tools/check_refs.py` answers a narrower question that the graph check cannot: does
+every `namespace:path` token in every pack point at something that exists? The split
+renames ids from the source pack's namespace into one namespace per module. An id it
+fails to recognise keeps the old namespace, where after the split nothing lives. The
+game then either refuses the pack at load time -
+
+```
+Unbound values in registry ResourceKey[minecraft:root / minecraft:dialog]:
+[macroengine:gate/confirm]
+```
+
+- or loads it and silently never runs the function.
+
+Both happened. The second one is the dangerous one, so the checker fails on either.
+It searches for bare `namespace:path` tokens rather than reusing the splitter's
+patterns, precisely so that a missing pattern does not also blind the test.
+
+`tools/test_check_refs.py` then breaks a copy of the output in each of the shapes
+that have broken a real server - a dialog JSON key, `dialog show`, `execute if
+predicate`, an SNBT `{func:"..."}` payload, `advancement revoke ... only`, and a
+reference to an id that does not exist - and asserts the checker reports each one.
+A checker that has never failed is not evidence, so it is tested against every way
+it has already been wrong.
+
 ### The entry point
 
 All 26 mods declare the same class,

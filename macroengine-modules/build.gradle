@@ -60,55 +60,37 @@ ext {
     // Java level for the entry point classes. 21 is what a 26.x-era loader runs
     // on; nothing here needs anything newer.
     javaLevel = JavaVersion.VERSION_21
+
+    // The loader artifact the entry point compiles against. It is also the version
+    // the user reported, so the interface compiled here is the one that runs.
+    loaderVersion = '0.20.1'
+
 }
 
 // -----------------------------------------------------------------------------
 // Every pack (core included) is packaged the same way, from a shared recipe.
 // -----------------------------------------------------------------------------
 
-// -----------------------------------------------------------------------------
-// The bootstrap jar: the one class every mod declares as its entry point.
-//
-// Built first, in its own Gradle build, because the root build's sub-projects are
-// the generated packs. Its jar is nested inside every mod jar, so the user
-// installs 26 files, not 27.
-// -----------------------------------------------------------------------------
-
-ext.bootstrapJar = layout.buildDirectory.file('bootstrap/macroengine-bootstrap.jar')
-
-tasks.register('buildBootstrap', Exec) {
-    description = 'Build the shared Fabric entry point jar.'
-    group = 'build'
-
-    def wrapper = file('tools/fabric-bootstrap/gradlew')
-    def workDir = file('tools/fabric-bootstrap')
-    def out = rootProject.ext.bootstrapJar.get().asFile
-    def version = rootProject.ext.modulesVersion
-
-    inputs.dir(workDir)
-    outputs.file(out)
-    outputs.upToDateWhen { false }
-
-    // The nested jar's filename is part of the path every mod declares, so it is
-    // copied out under a fixed name rather than used where Gradle put it.
-    commandLine wrapper.absolutePath, '--no-daemon', '--console=plain', '-q',
-            '-Pmodules_version=' + version, 'jar'
-    workingDir workDir
-
-    doLast {
-        def built = new File(workDir, 'build/libs/macroengine-bootstrap.jar')
-        if (!built.isFile()) {
-            throw new GradleException("bootstrap build produced no jar at ${built}")
-        }
-        out.parentFile.mkdirs()
-        java.nio.file.Files.copy(built.toPath(), out.toPath(),
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-        logger.lifecycle("bootstrap: ${out.length()} bytes -> ${out}")
-    }
-}
-
 subprojects {
     apply plugin: 'base'
+    // Every mod needs a compiled entry point class of its own.
+    apply plugin: 'java'
+
+    java {
+        sourceCompatibility = rootProject.ext.javaLevel
+        targetCompatibility = rootProject.ext.javaLevel
+    }
+
+    repositories {
+        maven { url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+    }
+
+    dependencies {
+        // The interface only. `compileOnly` because the running loader provides
+        // it; bundling fabric-loader inside a mod jar would be a disaster.
+        compileOnly "net.fabricmc:fabric-loader:${rootProject.ext.loaderVersion}"
+    }
 
     // A sub-project's directory is `packs/me_cb_module`, so the default build
     // directory would be `packs/me_cb_module/build` - inside the tree that
@@ -188,9 +170,10 @@ subprojects {
         def mcRange = rootProject.ext.minecraftRange
         def loaderRange = rootProject.ext.loaderRange
         def isCore = packName == 'me_core_module'
+        def packagePath = modId.replace('-', '_')
         def displayName = isCore ? 'macroEngine core'
                 : 'macroEngine ' + packName.substring(3, packName.length() - 7)
-        def entry = 'com.vortaforge.macroengine.runtime.MacroEngineEntry'
+        def entry = "com.vortaforge.macroengine.${packagePath}.MacroEngineEntry"
 
         inputs.property('modulesVersion', version)
         inputs.property('minecraftRange', mcRange)
@@ -249,30 +232,87 @@ subprojects {
         }
     }
 
-    // No per-module Java source. All twenty-six mods declare the same entry point,
-// which lives in the bootstrap jar built above and is nested into every mod jar.
-// Generating a class per pack produced `MacroEngineEntry` that implemented
-// nothing, so Fabric refused the cast and the server would not start.
+    // --- entry point source --------------------------------------------------
+    //
+    // One small class per mod, generated. It implements ModInitializer, because
+    // that is what Fabric casts the declared entrypoint to - the first version of
+    // this file generated a class with an onInitialize() method and no interface,
+    // and the loader refused to start the server.
+    //
+    // It is written under build/, not into the pack. packs/ is a verified input;
+    // this is a build product.
+    def entrySource = layout.buildDirectory.file(
+            "generated/entry/com/vortaforge/macroengine/${modId.replace('-', '_')}/MacroEngineEntry.java")
+
+    tasks.register('renderEntryPoint') {
+        description = "Write ${packName}'s ModInitializer."
+        group = 'build'
+
+        def out = entrySource
+        def cls = modId.replace('-', '_')
+        def id = modId
+        def version = rootProject.ext.modulesVersion
+
+        inputs.property('modId', id)
+        inputs.property('modulesVersion', version)
+        outputs.file(out)
+
+        doLast {
+            def file = out.get().asFile
+            file.parentFile.mkdirs()
+            file.text = """package com.vortaforge.macroengine.${cls};
+
+import net.fabricmc.api.ModInitializer;
+
+/**
+ * ${id}'s entry point.
+ *
+ * <p>It does nothing, and that is the correct amount for it to do. The behaviour
+ * is a data pack, which Fabric reads out of this jar's {@code data/} directory;
+ * nothing needs to be registered from Java.
+ *
+ * <p>It exists because Fabric requires it: the class named in
+ * {@code fabric.mod.json}'s {@code entrypoints.main} is constructed and cast to
+ * {@link ModInitializer}. A class that does not implement this interface fails
+ * that cast and stops the whole server, not just this mod.
+ */
+public final class MacroEngineEntry implements ModInitializer {
+
+    @Override
+    public void onInitialize() {
+        // Nothing to do. The data pack is the mod.
+    }
+}
+"""
+        }
+    }
+
+    // The generated source is where the java plugin looks for it.
+    sourceSets.main.java.srcDirs = [layout.buildDirectory.dir('generated/entry')]
+
+    compileJava.dependsOn 'renderEntryPoint'
 
 // --- the jar -------------------------------------------------------------
     tasks.register('packJar', Jar) {
         description = "Package ${packName} as a Fabric mod jar with its bundled data pack."
         group = 'build'
-        dependsOn rootProject.tasks.named('buildBootstrap')
+        dependsOn 'classes'
         dependsOn 'renderPackMeta', 'renderFabricMeta'
 
         archiveBaseName = packName
         archiveVersion = rootProject.ext.modulesVersion
         destinationDirectory = rootProject.layout.buildDirectory.dir('dist')
 
-        // The entry point, nested. Fabric extracts `META-INF/jars/*.jar` and loads
-        // it, so the class the manifest names is present without the user having
-        // to install a second file. `duplicatesStrategy` is WARN because every mod
-        // nests the same jar under the same name on purpose.
-        from(rootProject.ext.bootstrapJar) {
-            into 'META-INF/jars'
-            rename { 'macroengine-bootstrap.jar' }
-        }
+        // The compiled entry point. Fabric loads this class by name out of the
+        // mod jar and casts it to ModInitializer, so it has to be here and it has
+        // to implement that interface.
+        //
+        // It is compiled in this sub-project rather than shared or nested. Fabric's
+        // jar-in-jar is for nested *mods*: ModDiscoverer parses each declared
+        // nested jar expecting a fabric.mod.json and returns null when there is
+        // none, so a plain library jar nested there is silently dropped. One
+        // small class per mod is the shape the loader is built for.
+        from sourceSets.main.output
 
         // The pack root goes at the top of the jar: pack.mcmeta + data/. Fabric's
         // resource loader (fabric-resource-loader-v0, from Fabric API) scans every
@@ -383,6 +423,24 @@ tasks.register('testTools') {
 
 // Separate from testTools because it needs the jars, and `check` alone does not
 // build them. Run by CI after `dist`, and by `gradlew checkJars`.
+// `check_refs` is the static stand-in for "boot a server and see what fails to
+// load". Every id a pack names has to resolve, or the game refuses the pack at
+// load time (a dialog) or silently never runs a function (`{func:"..."}`).
+tasks.register('checkRefs', Exec) {
+    description = 'Assert every id a pack names exists in some pack.'
+    group = 'verification'
+    // Reads packs/ (the split output), not the jars, so it can run before them.
+    commandLine 'python3', 'tools/check_refs.py', 'packs'
+}
+
+// The checker itself has to be able to fail. A test that only ever passes is not
+// evidence of anything - this is the one that catches the checker going blind.
+tasks.register('testCheckRefs', Exec) {
+    description = 'Prove check_refs.py reports each id shape that broke a server.'
+    group = 'verification'
+    commandLine 'python3', 'tools/test_check_refs.py'
+}
+
 tasks.register('checkJars', Exec) {
     description = 'Assert every jar in build/dist is a loadable Fabric mod.'
     group = 'verification'

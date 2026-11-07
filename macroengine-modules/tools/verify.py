@@ -143,6 +143,14 @@ def check_resolve(root: Path, functions, tags, problems: Problems):
                 if ref not in tags:
                     problems.add("dangling-reference",
                                  f"{path.relative_to(root)} -> {ref} (nothing defines it)")
+            elif ref.endswith("/"):
+                # A directory id: the leaf is filled in by a macro at runtime
+                # (`function me_cmd_module:api/cmd/$(type)`), so there is no single
+                # file to find. What can be checked is that the directory has
+                # something in it - an empty one means every expansion fails.
+                if not any(f.startswith(ref) for f in functions):
+                    problems.add("dangling-reference",
+                                 f"{path.relative_to(root)} -> {ref} (empty directory)")
             elif ref not in functions and f"#{ref}" not in tags:
                 problems.add("dangling-reference",
                              f"{path.relative_to(root)} -> {ref} (nothing defines it)")
