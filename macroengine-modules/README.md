@@ -103,6 +103,28 @@ is free to retire.
 The `data/` layout is identical to a `datapacks/` folder, so the same jar also
 works there, with no mod loader at all.
 
+### Which pack owns what
+
+Every module can be installed on its own, next to the core. That is the property
+the split exists for, and it constrains what may live where:
+
+* **Core** holds the internals, the gates, load and tick, and the kernel services
+  the engine itself calls at boot - `math`, `rng`, `log`, `string`, `color`,
+  `validate`. A pack the engine cannot boot without is not a module.
+* **Core also owns the extension points**: `tags/function/hook/*` and
+  `tags/function/events/on_*`. Those are slots other modules publish into. A slot
+  belongs to whoever defines it, so it stays in core even when the implementation
+  behind it is a module.
+* **A module never names another module.** Where one used to, the call goes
+  through a core hook slot instead - `hook` firing an event calls
+  `#me_core_module:hook/events_fire`, which the `events` module fills. Install
+  `hook` without `events` and the slot is empty; the pack still loads.
+
+`tools/test_module_removal.py` enforces it by deleting each module in turn and
+re-verifying the rest. It found `me_core_module:loop` listing four `input`
+functions unconditionally: with the input module absent the tag could fail to
+load, so those values are now `required:false`.
+
 ### What is checked, and why
 
 `tools/verify.py` answers "is the module graph sound": references resolve, no

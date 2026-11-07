@@ -1,6 +1,6 @@
 {
-  "files": 32,
-  "bytes": 327475,
+  "files": 26,
+  "bytes": 276788,
   "symlinksDropped": 0,
   "paths": [
     ".github/workflows/ci.yml",
@@ -23,21 +23,15 @@
     "tools/check_jars.py",
     "tools/check_refs.py",
     "tools/check_shape.py",
-    "tools/fabric-bootstrap/build.gradle",
-    "tools/fabric-bootstrap/gradle.properties",
-    "tools/fabric-bootstrap/gradle/wrapper/gradle-wrapper.jar",
-    "tools/fabric-bootstrap/gradle/wrapper/gradle-wrapper.properties",
-    "tools/fabric-bootstrap/gradlew",
-    "tools/fabric-bootstrap/settings.gradle",
-    "tools/fabric-bootstrap/src/main/java/com/vortaforge/macroengine/runtime/MacroEngineEntry.java",
     "tools/split.py",
     "tools/summarize.py",
     "tools/test_check_refs.py",
+    "tools/test_module_removal.py",
     "tools/test_split_guard.py",
     "tools/verify.py"
   ],
   "repo": "vortaforge/macroengine-modules",
   "branch": "main",
-  "commit": "346addf62186d5cc3334c363ddc0831805ddac53",
+  "commit": "2afc5c04129197c3b55f2e95aad12c780a94aba2",
   "note": "Snapshot of the default branch. Read-only: do not edit here."
 }

@@ -441,6 +441,14 @@ tasks.register('testCheckRefs', Exec) {
     commandLine 'python3', 'tools/test_check_refs.py'
 }
 
+// Every module has to be individually removable, or the split is cosmetic. This
+// deletes each one in turn and re-verifies what is left.
+tasks.register('testModuleRemoval', Exec) {
+    description = 'Prove every module can be removed without breaking the rest.'
+    group = 'verification'
+    commandLine 'python3', 'tools/test_module_removal.py'
+}
+
 tasks.register('checkJars', Exec) {
     description = 'Assert every jar in build/dist is a loadable Fabric mod.'
     group = 'verification'

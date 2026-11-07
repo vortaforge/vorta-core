@@ -157,6 +157,12 @@ jobs:
         # and it says so only when the server starts. This says it here.
         run: python3 tools/check_refs.py packs
 
+      - name: Prove every module is removable
+        # `verify.py` checks the complete tree. This checks the claim the split
+        # exists for: install the core plus whichever modules you want. It removes
+        # each module in turn and re-verifies what is left.
+        run: python3 tools/test_module_removal.py
+
       - name: Prove the reference checker can fail
         # The checker is the thing standing between a renamed id and a server that
         # will not boot. If it silently goes blind it passes everything, so it is

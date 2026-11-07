@@ -124,6 +124,18 @@ def refs_in(path: Path):
     return out
 
 
+def value_is_optional(path: Path, value: str) -> bool:
+    """True when `value` is listed as {"id": ..., "required": false}."""
+    try:
+        obj = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    for entry in obj.get("values", []):
+        if isinstance(entry, dict) and entry.get("id") == value:
+            return entry.get("required") is False
+    return False
+
+
 def tag_values(path: Path):
     try:
         obj = json.loads(path.read_text(encoding="utf-8"))
@@ -169,6 +181,23 @@ def check_resolve(root: Path, functions, tags, problems: Problems):
                     problems.add("dangling-tag", f"{tag_id} lists tag {value} (nothing defines it)")
             elif target not in functions and f"#{target}" not in tags:
                 problems.add("dangling-tag", f"{tag_id} lists {value} (nothing defines it)")
+            else:
+                # Present here, but does it survive that module being removed?
+                # A tag in one pack listing another module's function is fine only
+                # as `required:false`; as a plain string the game fails the tag
+                # when that module is not installed, and the modules are supposed
+                # to be individually removable.
+                owner_ns = target.split(":", 1)[0]
+                tag_ns = tag_id.lstrip("#").split(":", 1)[0]
+                # Core is not optional, so a tag may name it unconditionally.
+                is_core = owner_ns == "me_core_module"
+                if owner_ns.startswith("me_") and owner_ns.endswith("_module") \
+                        and not is_core and owner_ns != tag_ns \
+                        and not value_is_optional(path, value):
+                    problems.add(
+                        "mandatory-foreign-tag",
+                        f"{tag_id} lists {value} without `required:false`, so removing "
+                        f"{owner_ns} breaks this tag")
 
 
 def check_old_namespace(root: Path, problems: Problems):

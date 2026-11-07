@@ -20,12 +20,12 @@
     },
     "macroengine-modules": {
       "branch": "main",
-      "commit": "346addf62186d5cc3334c363ddc0831805ddac53",
-      "files": 32,
-      "bytes": 327475
+      "commit": "2afc5c04129197c3b55f2e95aad12c780a94aba2",
+      "files": 26,
+      "bytes": 276788
     }
   },
-  "mirrorsGeneratedAt": "2026-11-07T08:23:41.273414Z",
+  "mirrorsGeneratedAt": "2026-11-07T09:19:02.787849Z",
   "org": "vortaforge",
   "generatedAt": "2026-11-06T18:53:45.967857Z",
   "count": 5,

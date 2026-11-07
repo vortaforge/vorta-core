@@ -90,8 +90,13 @@ def _(packs: pathlib.Path) -> None:
 
 @case("an SNBT `{func:\"...\"}` payload naming the old namespace")
 def _(packs: pathlib.Path) -> None:
-    edit(packs, "me_core_module/data/me_core_module/function/events/fire_queued.mcfunction",
-         lambda t: t.replace('{func:"me_core_module:', '{func:"macroengine:'))
+    # `events/` moved to its own module, so the file is found rather than assumed:
+    # this test is about the id shape, not about where the file lives.
+    hits = sorted(packs.rglob("fire_queued.mcfunction"))
+    if not hits:
+        raise AssertionError("fire_queued.mcfunction is not in the output any more")
+    hits[0].write_text(hits[0].read_text(encoding="utf-8").replace(
+        '{func:"me_', '{func:"macroengine:'), encoding="utf-8")
 
 
 @case("`advancement revoke ... only` naming the old namespace")

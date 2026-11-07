@@ -22,6 +22,11 @@
       "returns": false,
       "empty": false
     },
+    "events_fire": {
+      "tag": "me_core_module:hook/events_fire",
+      "returns": false,
+      "empty": false
+    },
     "hook_tick": {
       "tag": "me_core_module:hook/hook_tick",
       "returns": false,
@@ -104,7 +109,38 @@
       "namespace": "me_core_module",
       "modId": "macroengine-core",
       "pack": "packs/me_core_module",
-      "files": 1062,
+      "files": 1035,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "events",
+      "namespace": "me_events_module",
+      "modId": "macroengine-events",
+      "pack": "packs/me_events_module",
+      "files": 13,
+      "hooks": {
+        "events_fire": [
+          "me_events_module:events/fire"
+        ]
+      },
+      "publishes": []
+    },
+    {
+      "name": "text",
+      "namespace": "me_text_module",
+      "modId": "macroengine-text",
+      "pack": "packs/me_text_module",
+      "files": 5,
+      "hooks": {},
+      "publishes": []
+    },
+    {
+      "name": "geo",
+      "namespace": "me_geo_module",
+      "modId": "macroengine-geo",
+      "pack": "packs/me_geo_module",
+      "files": 9,
       "hooks": {},
       "publishes": []
     },

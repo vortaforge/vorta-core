@@ -99,19 +99,43 @@ MODULES: list[tuple[str, list[str]]] = [
         # function: by fully-qualified id.
         "systems/math/", "core/internal/systems/math/", "core/internal/math/",
         "systems/string/", "core/internal/systems/string/",
-        "systems/text/", "core/internal/text/",
+        "core/internal/text/",          # the string library; `systems/text/` is a module
         "systems/rng/", "core/internal/systems/rng/", "core/internal/rng/",
         "systems/uuid/", "core/internal/systems/uuid/", "core/internal/uuid/",
         "systems/log/", "core/internal/systems/log/",
-        "systems/geo/", "core/internal/systems/geo/",
+        "core/internal/systems/geo/",   # the impl; `systems/geo/` is its own module now
         "systems/audit/", "core/internal/systems/audit/",
         "systems/validate/",
         # A gate, in the literal sense: every stored-string command executor passes
         # through it before the engine macro-executes anything.
         "systems/cmd_gate/",
-        # The event bus the engine's deferred queue drains.
-        "events/",
+        # The `events/on_*` tags are extension points: a module publishes into
+        # them and core drains the queue. They are public surface, so they stay
+        # here. The bus *implementation* is a module - see below.
     ]),
+
+    # --- the event bus ---------------------------------------------------
+    # `function/events/**` is the bus itself: register, fire, has, list, the
+    # deferred queue the engine drains. It is a feature, not a kernel service -
+    # a pack that does not fire events does not need it.
+    #
+    # The `events/on_*` *tags* are the opposite: those are core's public extension
+    # points and other modules publish into them, so they must stay in core. The
+    # prefix below matches `events/` in the function tree only, because tags are
+    # addressed as `tags/function/events/<name>` and normalise_area drops the
+    # `tags/function/` folder - see assign_module's caller. Anything under
+    # `events/` that is a tag is therefore matched by the core entry above it.
+    ("events",    ["events/"]),
+
+    # --- libraries nobody in the engine calls ----------------------------
+    # `systems/text/` renders a value into a chat component and `systems/geo/`
+    # does region and sphere tests. Neither is reachable from boot, tick or any
+    # other function in the pack: they are dead weight inside core, and core's
+    # own rule is that it holds the engine, not a general toolbox. Everything
+    # else under systems/ (math, rng, log, string, color, validate) *is* called
+    # by core at boot or on tick, so it stays.
+    ("text",      ["systems/text/"]),
+    ("geo",       ["systems/geo/"]),
 
     # --- feature modules -------------------------------------------------
     # Public surface only. The implementation behind each of these lives in core
@@ -237,6 +261,16 @@ HOOK_CONTRIBUTIONS = [
     # The hook feature's per-tick scan. Core's tick driver called it directly, which
     # is the one thing core may never do - it makes the hook module unremovable.
     ("hook_tick",            "hook",        "core/internal/hook/tick_scan"),
+    # Core's deferred queue drains through `events:fire`. That is the event bus, and
+    # the bus is a module - so core reaches it through a slot instead of by name.
+    # With the module installed the queue drains exactly as before; without it the
+    # slot is empty and the queue simply accumulates, which is what "the event
+    # module is not installed" should mean.
+    # Two callers reach for the bus: core's queue drain and the hook module's
+    # raycast. Both go through the slot. Without it, installing `hook` without
+    # `events` is a broken install - and "every module depends on core, never on
+    # another module" is the rule the whole layout rests on.
+    ("events_fire",          "events",      "events/fire"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -611,7 +645,16 @@ class Split:
                 # never resolves and left every `function #ns:tag` call pointing
                 # at the old namespace.
                 area = area.split("/", 1)[1] if "/" in area else area
-            module = assign_module(area)
+            is_tag = parts[0] == "tags"
+            # A tag under `events/` is an *extension point*: core defines the slot
+            # and other modules publish into it. It is core's public surface, so it
+            # stays in core even though the bus that drains it is a module. Without
+            # this the slot would move into the event module and every module
+            # writing to it would depend on that module instead of on core.
+            if is_tag and area.split("/", 1)[0] == "events":
+                module = "core"
+            else:
+                module = assign_module(area)
             # Shared implementation behind a feature's public surface: it lives in
             # core, and the feature keeps a thin public function of its own that
             # forwards to it. Keyed by the original id so the table is readable
@@ -751,12 +794,12 @@ class Split:
             if path.suffix == ".mcfunction":
                 text = path.read_text(encoding="utf-8")
                 text = self._rewrite(text, rel, module)
-                if module == "core":
-                    # Only the core pack is barred from naming modules. Inside a
-                    # module a direct call to a sibling is fine as long as the
-                    # dependency direction is allowed, which the graph check
-                    # enforces separately.
-                    text = self._core_hook_rewrite(text)
+                # Modules reach core by id and that is fine, but a module must
+                # never reach *another module* - installing one without the other
+                # would then be a broken install. Any such call is routed through
+                # the core hook slot that owns the concept, for core and modules
+                # alike.
+                text = self._core_hook_rewrite(text)
                 text = self._cross_module_rewrite(text, module)
                 dest.write_text(text, encoding="utf-8")
                 self._note_hooks(module, rel, text, hook_values)
@@ -767,8 +810,10 @@ class Split:
                 except json.JSONDecodeError:
                     dest.write_text(raw, encoding="utf-8")
                     continue
-                dest.write_text(json.dumps(rewrite_json(obj, self.mapping), indent=2) + "\n",
-                                encoding="utf-8")
+                obj = rewrite_json(obj, self.mapping)
+                if rel.split("/")[0] == "tags":
+                    obj = self._optional_tag_values(obj, module, rel)
+                dest.write_text(json.dumps(obj, indent=2) + "\n", encoding="utf-8")
             else:
                 shutil.copy2(path, dest)
 
@@ -902,6 +947,35 @@ class Split:
                 f"\n"
                 f"return run function me_core_module:{core_area}\n",
                 encoding="utf-8")
+
+    def _optional_tag_values(self, obj, owner: str, rel: str):
+        """Mark a tag value `required:false` when another module defines it.
+
+        A tag in one pack that lists a function from *another* pack breaks when
+        that pack is not installed. `me_core_module:loop` lists four `input/`
+        functions: with the input module present it runs them, without it the game
+        logs a missing entry and the whole tag can fail to load.
+
+        The value is still listed - that is the point of the slot - but as an
+        object with `required:false`, which is the form the game accepts for a
+        value that may legitimately be absent. A value the same module defines is
+        left as-is: for those, *this* pack is the one that would be missing, and a
+        hard reference is correct.
+        """
+        values = obj.get("values")
+        if not isinstance(values, list):
+            return obj
+        out = []
+        for value in values:
+            if isinstance(value, str) and ":" in value:
+                owner_ns = value.lstrip("#").split(":", 1)[0]
+                if owner_ns.startswith("me_") and owner_ns.endswith("_module") \
+                        and owner_ns != module_namespace(owner):
+                    out.append({"id": value, "required": False})
+                    continue
+            out.append(value)
+        obj["values"] = out
+        return obj
 
     def _write_hook_tags(self) -> None:
         """Emit one slot tag per hook, plus each module's contribution file.
