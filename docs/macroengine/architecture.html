@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture &mdash; VortaForge Docs</title>
+<meta name="description" content="How macroEngine is split: the core/module rule, hook slots, event extension points, and the checks that enforce them.">
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfd; --fg:#16181d; --muted:#5b6270; --line:#e2e5ec; --card:#fff;
+          --accent:#2563eb; --code:#f3f4f7; --warn:#b45309; --warnbg:#fff7ed; --warnline:#fdba74; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1014; --fg:#e8eaf0; --muted:#9aa3b2; --line:#252a33; --card:#151920;
+            --accent:#7ab7ff; --code:#1b2028; --warn:#fbbf24; --warnbg:#241a08; --warnline:#7c4a03; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; padding:34px 20px 80px; }
+  h1 { font-size:2rem; margin:0 0 8px; letter-spacing:-0.02em; }
+  h2 { font-size:1.32rem; margin:42px 0 12px; padding-top:20px; border-top:1px solid var(--line); }
+  h3 { font-size:1.04rem; margin:26px 0 8px; }
+  .sub { color:var(--muted); margin:0 0 6px; font-size:15px; }
+  a { color:var(--accent); }
+  code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:var(--code); padding:2px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+        overflow-x:auto; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  .note { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent);
+          border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox { background:var(--warnbg); border:1px solid var(--warnline); border-left:4px solid var(--warnline);
+             border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox strong { color:var(--warn); }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Architecture</h1>
+  <p class="sub">The rules the split is built on, and what enforces them.</p>
+
+  <h2>The shape</h2>
+  <p>One core pack and 28 module packs. Every module declares
+     <code>macroengine-core</code> as a dependency. The core declares no module.</p>
+
+  <pre><code>macroengine-core
+   ├── macroengine-cmd
+   ├── macroengine-player
+   ├── macroengine-perm
+   └── … 25 more, each depending only on core</code></pre>
+
+  <h2>Rule 1: no module depends on another module</h2>
+  <p>A module may call the core by fully-qualified id. It may not call a sibling.
+     The reason is not tidiness: it is the difference between a module you can
+     delete and one you cannot. Two packs that call each other can only be installed
+     together, and a user who installs one of them gets a pack that references ids
+     that do not exist.</p>
+
+  <p>Where one feature genuinely needs another, the call goes through a
+     <strong>hook slot</strong> the core owns.</p>
+
+  <h3>Hook slots</h3>
+  <p>The core defines an empty tag:</p>
+  <pre><code># me_core_module, tags/function/hook/events_fire.json
+{ "replace": false, "values": [] }</code></pre>
+
+  <p>The implementing module writes the same tag id from its own pack, listing its
+     own function. The game merges them.</p>
+  <pre><code># me_events_module, same tag id
+{ "replace": false,
+  "values": [ { "id": "me_events_module:events/fire", "required": false } ] }</code></pre>
+
+  <p>The caller names the slot, never the implementation:</p>
+  <pre><code># in the core
+function #me_core_module:hook/events_fire with storage macroengine:engine queue[0]</code></pre>
+
+  <p>With the events module installed the queue drains. Without it the slot is empty
+     and the queue fills &mdash; which is what &ldquo;the event module is not
+     installed&rdquo; should mean. Neither case is an error.</p>
+
+  <div class="note">
+    <strong><code>with storage …</code> survives the rewrite.</strong> The arguments
+    after the id are not touched, so a slot call keeps its payload. The same holds
+    for the arguments on a plain function call.
+  </div>
+
+  <h2>Rule 2: the core does not name a module</h2>
+  <p>The consequence of rule 1, stated from the core&rsquo;s side. If the core calls
+     <code>me_events_module:events/fire</code> directly, the events module is no
+     longer optional, whatever the manifest says.</p>
+
+  <h2>Rule 3: core holds the engine, not a toolbox</h2>
+  <p>The core contains the internals, the gates, load and tick, and the kernel
+     services the engine calls at boot: <code>math</code>, <code>rng</code>,
+     <code>log</code>, <code>string</code>, <code>color</code>,
+     <code>validate</code>. A pack the engine cannot boot without is part of the
+     engine.</p>
+
+  <p>The same test sends features the other way. <code>systems/text</code> and
+     <code>systems/geo</code> were in core and are now modules, because nothing in
+     the engine called them &mdash; they were a general-purpose toolbox sitting in
+     the kernel.</p>
+
+  <h2>Rule 4: a tag may not require another module</h2>
+  <p>A tag in one pack that lists another pack&rsquo;s function has to mark that value
+     optional:</p>
+  <pre><code>{ "id": "me_input_module:input/anvil", "required": false }</code></pre>
+  <p>As a plain string, the game fails the tag when the other module is absent.
+     <code>me_core_module:loop</code> did exactly that with four <code>input</code>
+     functions. Naming the core itself is fine: the core is never absent.</p>
+
+  <h2>What enforces this</h2>
+  <p>Four checks, all in CI. Each exists because its rule was broken at least once.</p>
+
+  <table>
+    <thead><tr><th>Check</th><th>What it proves</th></tr></thead>
+    <tbody>
+      <tr><td><code>verify.py</code></td>
+          <td>Every reference resolves, no module reaches another&rsquo;s internals,
+              the core names no module, no foreign-module tag value is mandatory, and
+              the dependency graph is acyclic.</td></tr>
+      <tr><td><code>check_refs.py</code></td>
+          <td>Every <code>namespace:path</code> token in every pack exists. Catches an
+              id the split failed to rename, which is otherwise found only when the
+              game refuses the pack.</td></tr>
+      <tr><td><code>test_module_removal.py</code></td>
+          <td>Deletes each module in turn and re-verifies the rest &mdash; 29/29. This
+              is the claim the split exists for, tested rather than asserted.</td></tr>
+      <tr><td><code>test_check_refs.py</code></td>
+          <td>Breaks the output in each id shape that has broken a real server, and
+              asserts <code>check_refs</code> reports it. A checker that has never
+              failed is not evidence.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warnbox">
+    <strong>Why so much checking.</strong> Every defect below shipped in a release and
+    was found by booting a server and reading the log, not by a test:
+    an entry point that did not implement <code>ModInitializer</code> and stopped the
+    whole server; a dialog id that made the registry refuse to load;
+    <code>execute if predicate</code> and <code>dialog show</code> ids left pointing
+    at a namespace that no longer existed; an SNBT <code>{func:"…"}</code> payload
+    that silently never ran. Each is now a test.
+  </div>
+
+  <h2>The data pack layout</h2>
+  <p>Each module is a complete data pack: its own <code>pack.mcmeta</code>, its own
+     namespace, and no dependency on another pack&rsquo;s files. The jar root holds
+     exactly what the game expects, so the same file works in <code>mods/</code> and
+     in <code>datapacks/</code>.</p>
+
+  <p>Cross-pack references are the one thing that is not free. Every
+     <code>me_&lt;module&gt;_module:</code> id inside a module must point at the core
+     or be a tag value, and both are checked.</p>
+
+  <h2>The tick and load spine</h2>
+  <p>Exactly two entry points, both in the core, both vanilla function tags:</p>
+  <ul>
+    <li><code>#minecraft:load</code> &mdash; runs the load gate, then initialises
+        scoreboards, storages and player state.</li>
+    <li><code>#minecraft:tick</code> &mdash; drives the scheduler, then calls the
+        per-feature tick slots. Each feature attaches through
+        <code>#me_core_module:hook/&lt;feature&gt;_tick</code>, so a module that is not
+        installed simply contributes nothing to the tick.</li>
+  </ul>
+
+  <footer>
+    VortaForge &middot; Unlicense &middot;
+    <a href="../index.html">docs home</a> &middot;
+    <a href="index.html">macroEngine</a> &middot;
+    <a href="modules.html">module list</a> &middot;
+    <a href="reference.html">function reference</a>
+  </footer>
+</div>
+</body>
+</html>

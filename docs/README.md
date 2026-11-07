@@ -15,6 +15,10 @@ for the API, the version matrix and the rules a maintainer has to follow.
 | [Pack warnings](https://vortaforge.github.io/docs/docs/warnings.html) | Why the datapacks are archived, what "disarmed" enforces, how the gate works, and why some packs cannot show a clickable link |
 | [API reference](https://vortaforge.github.io/docs/docs/api.html) | Mod commands, every settings field, the datapack interop contract, and the `click_event` rename |
 | [Version matrix](https://vortaforge.github.io/docs/docs/versions.html) | Per-project Minecraft / loader / Loom versions and the rules that keep them honest |
+| [macroEngine](https://vortaforge.github.io/docs/macroengine/) | The engine rebuilt as a core plus 28 modules: install, the module list, the calling convention, and the architecture rules |
+| [Module list](https://vortaforge.github.io/docs/macroengine/modules.html) | All 29 packs, what each is for, which are optional |
+| [Function reference](https://vortaforge.github.io/docs/macroengine/reference.html) | The input-storage convention, return values, hook slots, and the public id list per module |
+| [Architecture](https://vortaforge.github.io/docs/macroengine/architecture.html) | The core/module rule, hook slots, event extension points, and the four checks that enforce them |
 | [Mod guides](https://vortaforge.github.io/docs/mods/) | afk-manager and join-throttle, end to end |
 | [Maintainer guide](https://vortaforge.github.io/docs/docs/maintainers.html) | The guard, the gates, the release flow, the archive rules |
 | [Archive register](https://vortaforge.github.io/docs/docs/archive.html) | Every archived project, its status and why it was archived |
@@ -37,6 +41,10 @@ docs/archive.html       generated from core's archived/archive.json
 mods/index.html         mod guide index
 mods/afk-manager.html
 mods/join-throttle.html
+macroengine/index.html  the engine: what it is, install, what is in a jar
+macroengine/modules.html      all 29 packs
+macroengine/reference.html    calling convention and public ids
+macroengine/architecture.html the rules and the checks that enforce them
 assets/                 reserved; pages currently inline all CSS
 ```
 

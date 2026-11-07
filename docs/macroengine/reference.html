@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Function reference &mdash; VortaForge Docs</title>
+<meta name="description" content="How to call macroEngine: the input storage convention, return values, hook slots and the public id list per module.">
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfd; --fg:#16181d; --muted:#5b6270; --line:#e2e5ec; --card:#fff;
+          --accent:#2563eb; --code:#f3f4f7; --warn:#b45309; --warnbg:#fff7ed; --warnline:#fdba74; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1014; --fg:#e8eaf0; --muted:#9aa3b2; --line:#252a33; --card:#151920;
+            --accent:#7ab7ff; --code:#1b2028; --warn:#fbbf24; --warnbg:#241a08; --warnline:#7c4a03; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; padding:34px 20px 80px; }
+  h1 { font-size:2rem; margin:0 0 8px; letter-spacing:-0.02em; }
+  h2 { font-size:1.32rem; margin:42px 0 12px; padding-top:20px; border-top:1px solid var(--line); }
+  h3 { font-size:1.04rem; margin:26px 0 8px; }
+  .sub { color:var(--muted); margin:0 0 6px; font-size:15px; }
+  a { color:var(--accent); }
+  code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:var(--code); padding:2px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+        overflow-x:auto; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  .note { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent);
+          border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox { background:var(--warnbg); border:1px solid var(--warnline); border-left:4px solid var(--warnline);
+             border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox strong { color:var(--warn); }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Function reference</h1>
+  <p class="sub">How to call the engine, and the ids each module publishes.</p>
+
+  <h2>The calling convention</h2>
+  <p>Every public id is <code>me_&lt;module&gt;_module:&lt;path&gt;</code>. There is no
+     <code>api/</code> or <code>systems/</code> segment in the id &mdash; those were
+     the organising folders of the original pack and carry no meaning once the
+     namespace already says which module a function belongs to.</p>
+
+  <p>Arguments travel through <code>storage macroengine:input</code>. A function
+     documents the keys it reads in its own header:</p>
+
+  <pre><code># me_cb_module:cb/run
+# Executes a raw command string via a temporary command block.
+#
+# INPUT  (storage macroengine:input cb):
+#   cmd   (string)  — the command to run  [REQUIRED]
+#   x     (int)     — CB block X          [default: 0]
+#   y     (int)     — CB block Y          [default: -64]</code></pre>
+
+  <p>So a call is: write the input storage, then call the function.</p>
+  <pre><code>data modify storage macroengine:input cb.cmd set value "say hello"
+function me_cb_module:cb/run</code></pre>
+
+  <h3>Return values</h3>
+  <p>Functions that answer a question return <code>1</code> or <code>0</code>, so they
+     compose with <code>execute if function</code>:</p>
+  <pre><code>execute if function me_perm_module:perm/check
+    run say allowed</code></pre>
+
+  <h3>Modules that are off by default</h3>
+  <p><code>perm</code> has an enforcement switch. With it off, or with the module not
+     installed, permission checks pass rather than fail &mdash; a server without the
+     permission module is not a server where nobody may do anything.</p>
+
+  <h2>Extension points</h2>
+  <p>Two tag families let you attach to the engine without editing it. Both live in
+     the core pack and both merge values from other packs.</p>
+
+  <h3>Hook slots &mdash; <code>#me_core_module:hook/&lt;slot&gt;</code></h3>
+  <p>Call a slot and every pack that filled it runs. The core defines the slot;
+     modules and your own pack add to it.</p>
+  <p>
+    <code>hook/cb_tick</code><br>
+    <code>hook/cmd_freeze_tick</code><br>
+    <code>hook/events_fire</code><br>
+    <code>hook/hook_tick</code><br>
+    <code>hook/interaction_tick</code><br>
+    <code>hook/load</code><br>
+    <code>hook/perm_require</code><br>
+    <code>hook/perm_tick</code><br>
+    <code>hook/player_enumerate</code><br>
+    <code>hook/player_get_name</code><br>
+    <code>hook/player_init</code><br>
+    <code>hook/player_init_from_name</code><br>
+    <code>hook/player_init_online</code><br>
+    <code>hook/player_resolve</code><br>
+    <code>hook/player_tick</code><br>
+    <code>hook/tick</code><br>
+    <code>hook/trigger_dispatch</code><br>
+    <code>hook/wand_tick</code><br>
+  </p>
+
+  <h3>Event extension points &mdash; <code>#me_core_module:events/&lt;event&gt;</code></h3>
+  <p>Fired by the event bus; add your function to the tag to receive it.</p>
+  <p>
+    <code>events/on_death</code><br>
+    <code>events/on_enchant</code><br>
+    <code>events/on_join</code><br>
+    <code>events/on_jump</code><br>
+    <code>events/on_lc</code><br>
+    <code>events/on_load</code><br>
+    <code>events/on_open_gui</code><br>
+    <code>events/on_rc</code><br>
+    <code>events/on_respawn</code><br>
+  </p>
+
+  <div class="note">
+    <strong>Add to a slot from your own pack.</strong> Write the same tag id in your
+    pack&rsquo;s namespace with <code>"replace": false</code> and your values. The game
+    merges the two definitions. Mark a value <code>{"id": "...", "required": false}</code>
+    if the pack providing it might not be installed &mdash; that is what keeps a
+    server with a partial install from failing the tag.
+  </div>
+
+  <h2>Ids by module</h2>
+  <p>The full public id list, per module. Internal implementation paths are not
+     listed: they are not a supported surface, and calling one is a bug that the
+     <a href="architecture.html">architecture checks</a> report.</p>
+
+  <div class="warnbox">
+    <strong>Not every id has a description.</strong> 466 of the 756 public functions
+    carry a header comment in the source; the rest ship without one, and this page
+    shows them with a dash rather than inventing a summary. If you need one of those,
+    read the function body &mdash; it is short, and the input keys are visible in the
+    first few lines.
+  </div>
+
+  <h3><code>me_core_module</code> &mdash; 254 public id(s)</h3>
+  <p>254 ids under <code>core//</code>. Read them from the jar: <code>unzip -l me_core_module-1.0.0.jar | grep mcfunctions</code>, or from the pack if you installed it as a data pack.</p>
+
+  <h3><code>me_events_module</code> &mdash; 13 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>events/events/clear_context</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/count</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/fire</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/fire_as</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/fire_queued</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/fire_to_player</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/has</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/has_func</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>events/events/list</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/register</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/register_once</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>events/events/unregister</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>events/events/unregister_one</code></td><td><em>no description in source</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_player_module</code> &mdash; 58 public id(s)</h3>
+  <p>58 ids under <code>player/player/</code>. Read them from the jar: <code>unzip -l me_player_module-1.0.0.jar | grep mcfunctions</code>, or from the pack if you installed it as a data pack.</p>
+
+  <h3><code>me_world_module</code> &mdash; 27 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>world/world/block_if</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/block_unless</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/clone_to</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/clear_effects</code></td><td>Clears all active potion effects from entities matching type+tag.</td></tr>
+      <tr><td><code>world/world/entity/count</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/count_near</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>world/world/entity/damage</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/for_each</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/for_each_in_radius</code></td><td>Runs a function as every entity of a given type within radius</td></tr>
+      <tr><td><code>world/world/entity/give_effect</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/kill_tagged</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/nearest</code></td><td>Finds the nearest entity of a given type to the named player and</td></tr>
+      <tr><td><code>world/world/entity/random</code></td><td>Selects ONE random entity matching the given type and tag and</td></tr>
+      <tr><td><code>world/world/entity/set_health</code></td><td>Sets the health of entities matching type+tag by applying</td></tr>
+      <tr><td><code>world/world/entity/set_name</code></td><td>Sets the display name (CustomName) on every entity matching the</td></tr>
+      <tr><td><code>world/world/entity/summon_at_player</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/tag_add</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/tag_remove</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/entity/tp_to</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/fill_hollow</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/fill_keep</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/fill_outline</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/fill_replace</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/get_time</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/setblock_if</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/time_phase</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>world/world/weather</code></td><td>======================================================================================</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_cmd_module</code> &mdash; 124 public id(s)</h3>
+  <p>124 ids under <code>cmd/cmd/</code>. Read them from the jar: <code>unzip -l me_cmd_module-1.0.0.jar | grep mcfunctions</code>, or from the pack if you installed it as a data pack.</p>
+
+  <h3><code>me_cb_module</code> &mdash; 9 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>cb/cb/cancel</code></td><td>Clears all pending delayed CB commands from the queue.</td></tr>
+      <tr><td><code>cb/cb/cancel_id</code></td><td>Cancels the pending entries of ONE run_delayed / run_sequence call</td></tr>
+      <tr><td><code>cb/cb/list</code></td><td>Prints pending queue entries to the executor.</td></tr>
+      <tr><td><code>cb/cb/queue_size</code></td><td>Returns the number of pending delayed CB commands.</td></tr>
+      <tr><td><code>cb/cb/run</code></td><td>Executes a raw command string via a temporary command block.</td></tr>
+      <tr><td><code>cb/cb/run_delayed</code></td><td>Schedules a command string to execute via command block after a delay.</td></tr>
+      <tr><td><code>cb/cb/run_repeating</code></td><td>Runs ONE command several times, a fixed number of ticks apart.</td></tr>
+      <tr><td><code>cb/cb/run_sequence</code></td><td>Schedules a list of commands to run sequentially, each separated</td></tr>
+      <tr><td><code>cb/cb/time_left</code></td><td>Reports how long until the NEXT pending entry of one run_delayed /</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_perm_module</code> &mdash; 20 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>perm/perm/check</code></td><td>Permission system off (module_perm 0b or perm_enforce 0b): everybody passes.</td></tr>
+      <tr><td><code>perm/perm/clear</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/count</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>perm/perm/exec</code></td><td>Read the verdict into a score and drop the scratch compound now, so no exit path below leaves it in storage.</td></tr>
+      <tr><td><code>perm/perm/grant</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/group/assign</code></td><td>Puts an online player into a group: adds the group.&lt;group&gt; tag and one</td></tr>
+      <tr><td><code>perm/perm/group/create</code></td><td>Creates an empty permission group. A group&#x27;s permissions become effective</td></tr>
+      <tr><td><code>perm/perm/group/grant_perm</code></td><td>Adds one permission name to an existing group. Players already in the</td></tr>
+      <tr><td><code>perm/perm/group/list</code></td><td>Prints every group and its permission list to @s (storage, not per-player</td></tr>
+      <tr><td><code>perm/perm/group/remove</code></td><td>Removes an online player from a group: drops the group.&lt;group&gt; tag and</td></tr>
+      <tr><td><code>perm/perm/has</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/list</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/require</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>perm/perm/revoke</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/run</code></td><td>Read the verdict into a score and drop the scratch compound now, so no exit path below leaves it in storage.</td></tr>
+      <tr><td><code>perm/perm/trigger/bind</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/trigger/bind_cmd</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/trigger/clear</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/trigger/enable</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>perm/perm/trigger/unbind</code></td><td><em>no description in source</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_store_module</code> &mdash; 33 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>store/store/add</code></td><td>global value</td></tr>
+      <tr><td><code>store/store/convert</code></td><td>Turns the string produced by api/store/render (or any string you put in</td></tr>
+      <tr><td><code>store/store/default</code></td><td>global value</td></tr>
+      <tr><td><code>store/store/get</code></td><td>global value</td></tr>
+      <tr><td><code>store/store/has</code></td><td>global value</td></tr>
+      <tr><td><code>store/store/nbt/add</code></td><td>Adds `by` (negative to subtract) to the integer at storage/path; a missing path counts as 0.</td></tr>
+      <tr><td><code>store/store/nbt/append</code></td><td>Appends macroengine:store nbt.value to the list at storage/path. Input (macro args): storage, path</td></tr>
+      <tr><td><code>store/store/nbt/copy</code></td><td>Copies one NBT value to another place.</td></tr>
+      <tr><td><code>store/store/nbt/count</code></td><td>RETURN the length of the list/string or the number of keys of the compound at</td></tr>
+      <tr><td><code>store/store/nbt/exists</code></td><td>RETURN 1 when storage/path exists, else 0. Input (macro args): storage, path</td></tr>
+      <tr><td><code>store/store/nbt/get</code></td><td>Reads one NBT value into macroengine:store nbt.result.</td></tr>
+      <tr><td><code>store/store/nbt/merge</code></td><td>Merges the compound in macroengine:store nbt.value into storage/path. Input (macro args): storage, path</td></tr>
+      <tr><td><code>store/store/nbt/move</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>store/store/nbt/pop</code></td><td>Removes the LAST element of the list at storage/path and puts it in macroengine:store nbt.result.</td></tr>
+      <tr><td><code>store/store/nbt/remove</code></td><td>Removes storage/path. Input (macro args): storage, path</td></tr>
+      <tr><td><code>store/store/nbt/set</code></td><td>Writes macroengine:store nbt.value to storage/path. Input (macro args): storage, path</td></tr>
+      <tr><td><code>store/store/nbt/set_default</code></td><td>Writes macroengine:store nbt.value to storage/path ONLY when the path does not exist yet</td></tr>
+      <tr><td><code>store/store/nbt/shift</code></td><td>Removes the FIRST element of the list at storage/path (queue behaviour) into macroengine:store nbt.result.</td></tr>
+      <tr><td><code>store/store/nbt/toggle</code></td><td>Flips the byte flag at storage/path (missing counts as 0b -&gt; becomes 1b).</td></tr>
+      <tr><td><code>store/store/player/add</code></td><td>per-player value of the executor (@s must be a player)</td></tr>
+      <tr><td><code>store/store/player/default</code></td><td>per-player value of the executor (@s must be a player)</td></tr>
+      <tr><td><code>store/store/player/get</code></td><td>per-player value of the executor (@s must be a player)</td></tr>
+      <tr><td><code>store/store/player/has</code></td><td>per-player value of the executor (@s must be a player)</td></tr>
+      <tr><td><code>store/store/player/remove</code></td><td>per-player value of the executor (@s must be a player)</td></tr>
+      <tr><td><code>store/store/player/set</code></td><td>per-player value of the executor (@s must be a player)</td></tr>
+      <tr><td><code>store/store/player/show</code></td><td>Reads the executor&#x27;s per-player value (api/store/player/get) and prints it to @s with tellraw.</td></tr>
+      <tr><td><code>store/store/remove</code></td><td>global value</td></tr>
+      <tr><td><code>store/store/render</code></td><td>Public entry point. The implementation lives in core, because it is</td></tr>
+      <tr><td><code>store/store/render_all</code></td><td>Renders the same template once for every online player (each render runs as that player, so</td></tr>
+      <tr><td><code>store/store/set</code></td><td>global value</td></tr>
+      <tr><td><code>store/store/show</code></td><td>Reads a global value (api/store/get) and prints it to @s with tellraw.</td></tr>
+      <tr><td><code>store/store/text/define</code></td><td>Stores a message template for one language.</td></tr>
+      <tr><td><code>store/store/text/remove</code></td><td>Removes one language of a template. INPUT macroengine:store in.name, in.lang. RETURN 1 / 0.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_input_module</code> &mdash; 31 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>input/input/anvil</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/command_block_minecart</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/give_anvil</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/give_anvil_custom</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/give_name_tag</code></td><td>Gives a marked name_tag ready for input capture.</td></tr>
+      <tr><td><code>input/input/give_writable_book</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>input/input/lectern</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/name_tag</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/anvil_capture</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/anvil_done</code></td><td>@s = player, at @s, with the renamed carrier on the cursor. Capture, then end</td></tr>
+      <tr><td><code>input/input/private/anvil_end</code></td><td>@s = player. Closes the anvil session.</td></tr>
+      <tr><td><code>input/input/private/anvil_open</code></td><td>Reward of the me_input_module:input/anvil_open advancement. @s = player who just</td></tr>
+      <tr><td><code>input/input/private/anvil_tick</code></td><td>@s = player with an open anvil session, at @s. Called every tick by input/anvil.</td></tr>
+      <tr><td><code>input/input/private/book_capture</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/cbm_align_tp</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>input/input/private/cbm_capture</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/cbm_process</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/lectern_capture</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/lectern_ray_loop</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/lectern_ray_start</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/name_tag_capture</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/sign_capture</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/private/sign_capture_from_components</code></td><td>26.3 component path</td></tr>
+      <tr><td><code>input/input/private/sign_ray_loop</code></td><td>Hit any sign-like block</td></tr>
+      <tr><td><code>input/input/private/sign_ray_start</code></td><td>Ray from player eyes along look vector. Requires @s player + rotation.</td></tr>
+      <tr><td><code>input/input/sign</code></td><td>Call as player: execute as &lt;player&gt; at @s run function me_input_module:input/sign</td></tr>
+      <tr><td><code>input/input/summon_cbm</code></td><td>Clear previous owner tag (multiplayer-safe)</td></tr>
+      <tr><td><code>input/input/validate/check</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/validate/int_range</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/validate/length</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>input/input/writable_book</code></td><td>======================================================================================</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_hook_module</code> &mdash; 26 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>hook/hook/bind</code></td><td>Binds a function or command to a specific event.</td></tr>
+      <tr><td><code>hook/hook/list</code></td><td>Shows all registered hook binds to macroengine.admin players.</td></tr>
+      <tr><td><code>hook/hook/on_advancement_fire</code></td><td>Called from the user&#x27;s own advancement reward function.</td></tr>
+      <tr><td><code>hook/hook/on_break_block</code></td><td>Reward: break_block advancement (item_durability_changed, delta max -1)</td></tr>
+      <tr><td><code>hook/hook/on_bred_animals</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>hook/hook/on_brewed_potion</code></td><td>======================================================================================</td></tr>
+      <tr><td><code>hook/hook/on_dimension_change</code></td><td>Advancement reward: runs when changed_dimension triggers.</td></tr>
+      <tr><td><code>hook/hook/on_drop</code></td><td>Binds a function or command to the &quot;drop_item&quot; event.</td></tr>
+      <tr><td><code>hook/hook/on_eat</code></td><td>Binds a function or command to the &quot;eat&quot; event.</td></tr>
+      <tr><td><code>hook/hook/on_entity_kill</code></td><td>Reward: entity_kill advancement (player_killed_entity trigger)</td></tr>
+      <tr><td><code>hook/hook/on_fish_caught</code></td><td>Binds a function or command to the &quot;fish_caught&quot; event.</td></tr>
+      <tr><td><code>hook/hook/on_hero_of_the_village</code></td><td>Reward: hero_of_the_village advancement (raid victory)</td></tr>
+      <tr><td><code>hook/hook/on_interact_anvil</code></td><td>Advancement reward: runs when player interacts with an anvil</td></tr>
+      <tr><td><code>hook/hook/on_interact_shulker_box</code></td><td>Advancement reward: runs when player opens a shulker box</td></tr>
+      <tr><td><code>hook/hook/on_item_use</code></td><td>Reward: item_use advancement (using_item trigger)</td></tr>
+      <tr><td><code>hook/hook/on_jump</code></td><td>Binds a function or command to the &quot;jumped&quot; event.</td></tr>
+      <tr><td><code>hook/hook/on_killed_by_arrow</code></td><td>Reward: killed_by_arrow advancement (entity_killed_player + killing_blow arrow)</td></tr>
+      <tr><td><code>hook/hook/on_open_chest</code></td><td>Binds a function or command to the &quot;open_chest&quot; event.</td></tr>
+      <tr><td><code>hook/hook/on_placed_block</code></td><td>Advancement reward: runs when placed_block triggers</td></tr>
+      <tr><td><code>hook/hook/on_target_hit</code></td><td>Binds a function or command to the &quot;target_hit&quot; event.</td></tr>
+      <tr><td><code>hook/hook/on_trade</code></td><td>Advancement reward: runs when villager_trade triggers.</td></tr>
+      <tr><td><code>hook/hook/raycast/found</code></td><td>Block found!</td></tr>
+      <tr><td><code>hook/hook/raycast/loop</code></td><td>Raycast loop</td></tr>
+      <tr><td><code>hook/hook/raycast/start</code></td><td>Raycast start</td></tr>
+      <tr><td><code>hook/hook/unbind</code></td><td>Removes all binds belonging to a specific event.</td></tr>
+      <tr><td><code>hook/hook/unbind_all</code></td><td>Clears all hook binds.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_toggle_module</code> &mdash; 25 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>toggle/toggle/block/false</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/block/true</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/cb/false</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/cb/true</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/container/false</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/container/true</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/geo/false</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/geo/true</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/hook/false</code></td><td>Called by the module toggle menu when State = false.</td></tr>
+      <tr><td><code>toggle/toggle/hook/true</code></td><td>Called by the module toggle menu when State = true.</td></tr>
+      <tr><td><code>toggle/toggle/interaction/false</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/interaction/true</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/list</code></td><td>Prints the enabled/disabled state of all DL modules.</td></tr>
+      <tr><td><code>toggle/toggle/perm/cmd_off</code></td><td>Per-command permissions OFF (default): api/cmd/* wrappers are not permission-checked.</td></tr>
+      <tr><td><code>toggle/toggle/perm/cmd_on</code></td><td>Per-command permissions ON: every api/cmd/&lt;name&gt; wrapper needs the permission cmd.&lt;name&gt; (needs perm enforceme</td></tr>
+      <tr><td><code>toggle/toggle/perm/default_off</code></td><td>Make &quot;enforcement off&quot; the DEFAULT. Takes effect when perm_enforce is created or reset (core/config/reset); it</td></tr>
+      <tr><td><code>toggle/toggle/perm/default_on</code></td><td>Make &quot;enforcement on&quot; the DEFAULT. Takes effect when perm_enforce is created or reset (core/config/reset); it </td></tr>
+      <tr><td><code>toggle/toggle/perm/enforce_off</code></td><td>Turn permission enforcement OFF: every api/perm/require and api/perm/check passes for everybody.</td></tr>
+      <tr><td><code>toggle/toggle/perm/enforce_on</code></td><td>Turn permission enforcement ON: api/perm/require and api/perm/check enforce again.</td></tr>
+      <tr><td><code>toggle/toggle/perm/false</code></td><td>Who may flip it: a server/console executor (no entity) or a player with the macroengine.admin tag.</td></tr>
+      <tr><td><code>toggle/toggle/perm/status</code></td><td>Prints the permission switches to @s (enforcement, per-command permissions, default).</td></tr>
+      <tr><td><code>toggle/toggle/perm/true</code></td><td>Who may flip it: a server/console executor (no entity) or a player with the macroengine.admin tag.</td></tr>
+      <tr><td><code>toggle/toggle/show</code></td><td>Prints a clickable module enable/disable menu.</td></tr>
+      <tr><td><code>toggle/toggle/wand/false</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>toggle/toggle/wand/true</code></td><td><em>no description in source</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_flag_module</code> &mdash; 13 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>flag/flag/any</code></td><td>Checks whether ANY of two flags is set.</td></tr>
+      <tr><td><code>flag/flag/clear</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>flag/flag/copy</code></td><td>Copies a flag value from one key to another.</td></tr>
+      <tr><td><code>flag/flag/get</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>flag/flag/get_or_default</code></td><td>Returns 1b if the flag is set, otherwise stores the given default.</td></tr>
+      <tr><td><code>flag/flag/list</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>flag/flag/list_systems</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>flag/flag/set</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>flag/flag/set_if</code></td><td>Sets a flag only when a scoreboard condition is met.</td></tr>
+      <tr><td><code>flag/flag/toggle</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>flag/flag/toggle_system/flip</code></td><td>The old exec flipped a score 1 -&gt; 0 and then 0 -&gt; 1 in the same call, so it never changed anything.</td></tr>
+      <tr><td><code>flag/flag/toggle_system</code></td><td>Valid systems: time | queue | player | hud | admin (anything else does nothing).</td></tr>
+      <tr><td><code>flag/flag/unset</code></td><td><em>no description in source</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_logic_module</code> &mdash; 10 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>logic/logic/if_and</code></td><td>Dispatches func only if BOTH a and b are non-zero (logical AND).</td></tr>
+      <tr><td><code>logic/logic/if_eq</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>logic/logic/if_gt</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>logic/logic/if_gte</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>logic/logic/if_lt</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>logic/logic/if_lte</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>logic/logic/if_not</code></td><td>Dispatches func only if value is zero (logical NOT).</td></tr>
+      <tr><td><code>logic/logic/if_not_eq</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>logic/logic/if_or</code></td><td>Dispatches func if EITHER a or b is non-zero (logical OR).</td></tr>
+      <tr><td><code>logic/logic/if_xor</code></td><td>Dispatches func only if EXACTLY ONE of a and b is non-zero (logical XOR).</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_geo_module</code> &mdash; 9 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>geo/geo/as_nearby_player</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>geo/geo/in_region</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>geo/geo/in_region_unless</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>geo/geo/in_sphere</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>geo/geo/near_entity</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>geo/geo/near_entity_unless</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>geo/geo/region_watch/list</code></td><td>Shows all registered regions to admin players.</td></tr>
+      <tr><td><code>geo/geo/region_watch/register</code></td><td>Defines a persistent region. Player position is checked every tick;</td></tr>
+      <tr><td><code>geo/geo/region_watch/unregister</code></td><td>Deletes a registered region. Player state scores are not cleared</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_text_module</code> &mdash; 5 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>text/text/bool</code></td><td>Prints an NBT boolean or 0/1 as &quot;yes&quot; / &quot;no&quot;.</td></tr>
+      <tr><td><code>text/text/explain</code></td><td>Prints the NBT text-component rendering rules this module exists to</td></tr>
+      <tr><td><code>text/text/label</code></td><td>Prints &quot;label: value&quot; for one NBT value, so list-style output does not</td></tr>
+      <tr><td><code>text/text/show</code></td><td>Prints one NBT value to the caller, rendered as plain text.</td></tr>
+      <tr><td><code>text/text/show_to</code></td><td>As systems/text/show, but to an arbitrary selector.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_title_module</code> &mdash; 16 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>title/title/actionbar</code></td><td>Displays a full JSON component string in the actionbar of a named player.</td></tr>
+      <tr><td><code>title/title/actionbar_all_p</code></td><td>actionbar_p for every online player. Storage input as actionbar_p.</td></tr>
+      <tr><td><code>title/title/actionbar_p</code></td><td>Action bar with %tokens% for @s. The text is rendered with api/store/render into a plain</td></tr>
+      <tr><td><code>title/title/actionbar_tag_p</code></td><td>actionbar_p for every online player carrying a tag. Input (macro arg): tag. Storage input as actionbar_p.</td></tr>
+      <tr><td><code>title/title/broadcast</code></td><td>Sends a complete title display (timing + title + subtitle) to every online player.</td></tr>
+      <tr><td><code>title/title/broadcast_p</code></td><td>show_p for every online player; %player% and %score:...% resolve per recipient.</td></tr>
+      <tr><td><code>title/title/clear</code></td><td>Clears the title currently shown to a player. Input (macro arg): player</td></tr>
+      <tr><td><code>title/title/reset</code></td><td>Clears the title and resets fade/stay times to vanilla defaults. Input (macro arg): player</td></tr>
+      <tr><td><code>title/title/show</code></td><td>Sets display timing then shows title + subtitle for one player in a single call.</td></tr>
+      <tr><td><code>title/title/show_area_p</code></td><td>show_p for every player within `radius` blocks of the position the function runs at.</td></tr>
+      <tr><td><code>title/title/show_p</code></td><td>Unlike title/show (which builds {&quot;text&quot;:&quot;$(title)&quot;} and breaks on quotes or backslashes)</td></tr>
+      <tr><td><code>title/title/show_raw</code></td><td>Like title/show but accepts full serialized JSON component strings,</td></tr>
+      <tr><td><code>title/title/show_tag_p</code></td><td>show_p for every online player carrying a tag. Input (macro arg): tag. Storage input as show_p.</td></tr>
+      <tr><td><code>title/title/show_team_p</code></td><td>show_p for every online member of a team. Input (macro arg): team. Storage input as show_p.</td></tr>
+      <tr><td><code>title/title/show_to_p</code></td><td>show_p for a named player. Input (macro arg): player. Storage input as show_p.</td></tr>
+      <tr><td><code>title/title/times</code></td><td>Sets title timing for a player without showing anything.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_color_module</code> &mdash; 10 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>color/color/from_score</code></td><td>Maps an integer score range to a color using a threshold table.</td></tr>
+      <tr><td><code>color/color/gradient_delete</code></td><td>Removes a named gradient from storage.</td></tr>
+      <tr><td><code>color/color/gradient_set</code></td><td>Registers a named gradient as an ordered list of color strings.</td></tr>
+      <tr><td><code>color/color/lerp</code></td><td>Looks up a precomputed lerp step from a named gradient table.</td></tr>
+      <tr><td><code>color/color/palette_delete</code></td><td>Removes a color alias from the runtime palette.</td></tr>
+      <tr><td><code>color/color/palette_get</code></td><td>Reads a color alias from the runtime palette.</td></tr>
+      <tr><td><code>color/color/palette_list</code></td><td>Prints all registered palette entries to the calling player.</td></tr>
+      <tr><td><code>color/color/palette_set</code></td><td>Registers a named color alias in the runtime palette.</td></tr>
+      <tr><td><code>color/color/resolve</code></td><td>Looks up a named palette entry or returns the value as-is if not found.</td></tr>
+      <tr><td><code>color/color/validate</code></td><td>Checks whether a color string is a known named color or a valid hex code.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_tui_module</code> &mdash; 4 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>tui/tui/button</code></td><td>INPUT macroengine:tui in:</td></tr>
+      <tr><td><code>tui/tui/divider</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>tui/tui/header</code></td><td>INPUT macroengine:tui in:  text (string with %tokens%, required), args (optional)</td></tr>
+      <tr><td><code>tui/tui/line</code></td><td>INPUT macroengine:tui in:</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_container_module</code> &mdash; 9 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>container/container/info</code></td><td>One-call summary of a container block: size, used and free slots, first free slot.</td></tr>
+      <tr><td><code>container/container/is_empty</code></td><td>Condition: does the container hold no items at all?</td></tr>
+      <tr><td><code>container/container/is_full</code></td><td>Condition: is every slot of the container occupied?</td></tr>
+      <tr><td><code>container/container/slot_clear</code></td><td>Empties one slot.</td></tr>
+      <tr><td><code>container/container/slot_get</code></td><td>Reads one slot of a container block.</td></tr>
+      <tr><td><code>container/container/slot_is_empty</code></td><td>Condition: is this slot empty?</td></tr>
+      <tr><td><code>container/container/slot_set</code></td><td>Writes an item into one slot (replaces what was there).</td></tr>
+      <tr><td><code>container/container/slot_swap</code></td><td>Swaps two slots of one container. An empty slot swaps too (the item moves).</td></tr>
+      <tr><td><code>container/container/transfer</code></td><td>Hopper-like transfer: moves ONE STACK from a source container to the first free slot of a target.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_item_module</code> &mdash; 6 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>item/item/combo_marker</code></td><td>Stamps a consecutive-use counter under minecraft:custom_data.macroengine.combo</td></tr>
+      <tr><td><code>item/item/durability_overlay</code></td><td>Stamps a secondary, datapack-tracked durability counter under</td></tr>
+      <tr><td><code>item/item/hidden_flag</code></td><td>Appends a named boolean flag to minecraft:custom_data.macroengine.flags on the</td></tr>
+      <tr><td><code>item/item/owner_tag</code></td><td>Stamps the target&#x27;s main-hand item with an owner tag under</td></tr>
+      <tr><td><code>item/item/use_cooldown</code></td><td>Stamps a per-item custom cooldown expiry tick under</td></tr>
+      <tr><td><code>item/item/use_cooldown_check</code></td><td>Reads minecraft:custom_data.macroengine.cooldown_until from the target&#x27;s</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_interaction_module</code> &mdash; 7 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>interaction/interaction/bind_attack</code></td><td>Binds a function to an interaction entity attack event.</td></tr>
+      <tr><td><code>interaction/interaction/bind_use</code></td><td>Binds a function to an interaction entity use (right-click) event.</td></tr>
+      <tr><td><code>interaction/interaction/list</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>interaction/interaction/remove</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>interaction/interaction/spawn</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>interaction/interaction/unbind_attack</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>interaction/interaction/unbind_use</code></td><td><em>no description in source</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_block_module</code> &mdash; 8 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>block/block/hopper_in</code></td><td>Hopper-style input into a registered custom block (same as insert, but the handler sees op=hopper_in).</td></tr>
+      <tr><td><code>block/block/hopper_out</code></td><td>Hopper-style output from a registered custom block (same as take, but the handler sees op=hopper_out).</td></tr>
+      <tr><td><code>block/block/insert</code></td><td>Puts an item into a registered custom block.</td></tr>
+      <tr><td><code>block/block/list</code></td><td>Prints the registered custom blocks to @s.</td></tr>
+      <tr><td><code>block/block/register</code></td><td>Registers a custom block (a block entity backed by a container, or any block you handle yourself).</td></tr>
+      <tr><td><code>block/block/take</code></td><td>Takes a stack out of a registered custom block.</td></tr>
+      <tr><td><code>block/block/unregister</code></td><td>Removes a registered custom block.</td></tr>
+      <tr><td><code>block/block/validate</code></td><td>Asks whether an operation would be allowed, without doing it.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_wand_module</code> &mdash; 12 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>wand/wand/cooldown_check</code></td><td>Checks whether the wand cooldown is active.</td></tr>
+      <tr><td><code>wand/wand/cooldown_set</code></td><td>Applies a cooldown to wand usage.</td></tr>
+      <tr><td><code>wand/wand/give</code></td><td>Gives the player a carrot_on_a_stick marked as a wand.</td></tr>
+      <tr><td><code>wand/wand/give_custom</code></td><td>Gives a custom item tagged as a wand.</td></tr>
+      <tr><td><code>wand/wand/give_lore</code></td><td>Writes the wand with lore to mainhand (item replace).</td></tr>
+      <tr><td><code>wand/wand/has</code></td><td>Does the player hold a specific wand in their main hand?</td></tr>
+      <tr><td><code>wand/wand/list</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>wand/wand/register</code></td><td>Registers a wand with a specific custom_data tag.</td></tr>
+      <tr><td><code>wand/wand/register_cmd</code></td><td>Binds a raw command to a wand (carrot_on_a_stick).</td></tr>
+      <tr><td><code>wand/wand/register_fn</code></td><td>Binds a function to a wand (carrot_on_a_stick).</td></tr>
+      <tr><td><code>wand/wand/unregister</code></td><td>Removes all wand binds belonging to a specific tag.</td></tr>
+      <tr><td><code>wand/wand/unregister_all</code></td><td><em>no description in source</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_trigger_module</code> &mdash; 7 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>trigger/trigger/bind</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>trigger/trigger/bind_cmd</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>trigger/trigger/disable</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>trigger/trigger/enable</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>trigger/trigger/list</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>trigger/trigger/unbind</code></td><td><em>no description in source</em></td></tr>
+      <tr><td><code>trigger/trigger/unbind_all</code></td><td><em>no description in source</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_rate_limit_module</code> &mdash; 7 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>rate_limit/rate_limit/channel/check</code></td><td>Prevents a tick system&#x27;s function (e.g. core/tick/admin_systems) from</td></tr>
+      <tr><td><code>rate_limit/rate_limit/check</code></td><td>The core API call. Checks whether the key is under its configured limit</td></tr>
+      <tr><td><code>rate_limit/rate_limit/config</code></td><td>Creates or replaces a sliding window rule for any key.</td></tr>
+      <tr><td><code>rate_limit/rate_limit/global/check</code></td><td>Convenience wrapper for global (server-wide) rate limits.</td></tr>
+      <tr><td><code>rate_limit/rate_limit/global/config</code></td><td>function me_rate_limit_module:rate_limit/global/config {key:&quot;boss_spawn&quot;,limit:1,window:24000}</td></tr>
+      <tr><td><code>rate_limit/rate_limit/player/check</code></td><td>Builds the compound key &quot;player:&lt;key&gt;:&lt;player&gt;&quot; and ensures the bucket exists.</td></tr>
+      <tr><td><code>rate_limit/rate_limit/player/config</code></td><td>Creates one template rule. The player bucket key is &quot;player:&lt;key&gt;:&lt;player&gt;&quot;.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_sound_module</code> &mdash; 3 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>sound/sound/play</code></td><td>Entity-targeted playsound wrapper.</td></tr>
+      <tr><td><code>sound/sound/play_at</code></td><td>Coordinate-targeted playsound. Anyone within range of (x,y,z) hears it.</td></tr>
+      <tr><td><code>sound/sound/stop</code></td><td>Stops a specific sound (and category) on a target selector.</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_gamerule_module</code> &mdash; 3 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>gamerule/gamerule/get</code></td><td>Reads a custom gamerule value from storage into macroengine:output gamerule.</td></tr>
+      <tr><td><code>gamerule/gamerule/reset</code></td><td>Removes a custom gamerule from engine storage entirely.</td></tr>
+      <tr><td><code>gamerule/gamerule/set</code></td><td>Sets a custom gamerule value, persists it in storage, and dispatches</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_diagnostics_module</code> &mdash; 2 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>diagnostics/diagnostics/report</code></td><td>Prints a human-readable health report to @s. Collects first (systems/diagnostics/collect), so the</td></tr>
+      <tr><td><code>diagnostics/diagnostics/status</code></td><td>Machine-readable health check. Runs systems/diagnostics/collect and returns the number of issues</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>me_macro_module</code> &mdash; 5 public id(s)</h3>
+  <table>
+    <thead><tr><th>Id</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>macro/macro/with_advancement</code></td><td>Checks whether a player has completed a specific advancement and</td></tr>
+      <tr><td><code>macro/macro/with_function</code></td><td>Runs a provider (source) function; passes the data that function</td></tr>
+      <tr><td><code>macro/macro/with_predicate</code></td><td>Clear pipe</td></tr>
+      <tr><td><code>macro/macro/with_score</code></td><td>Reads a player&#x27;s scoreboard value and injects it as a named</td></tr>
+      <tr><td><code>macro/macro/with_tag</code></td><td>Clear pipe</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    VortaForge &middot; Unlicense &middot;
+    <a href="../index.html">docs home</a> &middot;
+    <a href="index.html">macroEngine</a> &middot;
+    <a href="modules.html">module list</a>
+  </footer>
+</div>
+</body>
+</html>

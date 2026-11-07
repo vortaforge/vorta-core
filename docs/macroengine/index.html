@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>macroEngine &mdash; VortaForge Docs</title>
+<meta name="description" content="macroEngine: a Minecraft 26.3 engine delivered as 29 Fabric mods that compose at load time.">
+<style>
+  :root { color-scheme: light dark; --bg:#fbfbfd; --fg:#16181d; --muted:#5b6270; --line:#e2e5ec; --card:#fff;
+          --accent:#2563eb; --code:#f3f4f7; --warn:#b45309; --warnbg:#fff7ed; --warnline:#fdba74; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1014; --fg:#e8eaf0; --muted:#9aa3b2; --line:#252a33; --card:#151920;
+            --accent:#7ab7ff; --code:#1b2028; --warn:#fbbf24; --warnbg:#241a08; --warnline:#7c4a03; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; padding:34px 20px 80px; }
+  h1 { font-size:2rem; margin:0 0 8px; letter-spacing:-0.02em; }
+  h2 { font-size:1.32rem; margin:42px 0 12px; padding-top:20px; border-top:1px solid var(--line); }
+  h3 { font-size:1.04rem; margin:26px 0 8px; }
+  .sub { color:var(--muted); margin:0 0 6px; font-size:15px; }
+  a { color:var(--accent); }
+  code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13.5px; }
+  code { background:var(--code); padding:2px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+        overflow-x:auto; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  .note { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent);
+          border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox { background:var(--warnbg); border:1px solid var(--warnline); border-left:4px solid var(--warnline);
+             border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14.5px; }
+  .warnbox strong { color:var(--warn); }
+  footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>macroEngine</h1>
+  <p class="sub">One engine, split into a core and twenty-eight modules you install
+     a la carte. Every module is a Fabric mod that also works as a plain data pack.</p>
+
+  <div class="note">
+    <strong>Status.</strong> This is the rebuilt macroEngine, not the archived
+    <code>macroengine-datapack</code>. The original single pack is still archived and
+    still warns when you load it; see the <a href="../docs/warnings.html">pack
+    warnings</a>. This page describes the split that replaced it.
+  </div>
+
+  <h2>What it is</h2>
+  <p>macroEngine is a command-driven engine for Minecraft data packs: a scheduler, a
+     permission layer, player and world state, an event bus, hooks, and a large
+     function API on top. The original shipped as one data pack of roughly 1,300
+     functions. That pack is now split into <strong>one core and 28 modules</strong>,
+     each packaged as a Fabric mod.</p>
+
+  <p>The split exists so that installing the engine does not mean installing all of
+     it. A server that never touches permissions does not load the permission
+     module, and its functions are not in memory.</p>
+
+  <h2>The one rule the layout rests on</h2>
+  <p>Every module depends on the core. <strong>No module depends on another
+     module.</strong> Where one feature needs another, the call goes through a hook
+     slot the core owns &mdash; the core defines the slot, and whichever module
+     implements the concept fills it.</p>
+
+  <p>This is not tidiness. It is what makes a module removable: with the rule held,
+     you can delete any one jar and the remainder still loads. That property is
+     checked automatically &mdash; see <a href="architecture.html">architecture</a>.</p>
+
+  <h2>Install</h2>
+  <ol>
+    <li>Fabric loader for Minecraft 26.3, Java 25.</li>
+    <li><strong>Fabric API is required.</strong> The pack inside each jar is read by
+        <code>fabric-resource-loader</code>, which ships in Fabric API, not in the
+        loader. Every manifest declares the dependency, so a missing Fabric API stops
+        the game with a readable message rather than loading 29 mods that do nothing.</li>
+    <li>Drop <code>me_core_module</code> in <code>mods/</code>, plus whichever modules
+        you want.</li>
+  </ol>
+
+  <h2>Or use it as a data pack</h2>
+  <p>The same jar works in a world&rsquo;s <code>datapacks/</code> folder with no mod
+     loader at all. The jar root holds <code>pack.mcmeta</code> and <code>data/</code>
+     at exactly the paths the game expects; the Fabric metadata is additional, not a
+     wrapper. That is the compatibility promise the original pack had, kept.</p>
+
+  <h2>What is inside a jar</h2>
+  <pre><code>me_cb_module-1.0.0.jar
+├── fabric.mod.json                       id `macroengine-cb`
+├── com/vortaforge/macroengine/
+│   └── macroengine_cb/MacroEngineEntry.class   the ModInitializer
+├── pack.mcmeta                           data pack manifest, format 121
+└── data/me_cb_module/...                 the pack itself</code></pre>
+
+  <p>The class exists because Fabric requires one. It implements
+     <code>ModInitializer</code> and does nothing: the behaviour is the data pack,
+     which Fabric reads out of the jar&rsquo;s <code>data/</code> directory. Nothing is
+     registered from Java.</p>
+
+  <div class="warnbox">
+    <strong>A class that is merely present is not enough.</strong> Fabric constructs
+    the declared entry point and casts it to <code>ModInitializer</code>. A class that
+    does not implement the interface fails that cast and stops the entire server, not
+    just the offending mod. This project shipped that once.
+  </div>
+
+  <h2>Where to go next</h2>
+  <table>
+    <thead><tr><th>Page</th><th>What it covers</th></tr></thead>
+    <tbody>
+      <tr><td><a href="modules.html">Module list</a></td>
+          <td>All 29 packs, what each is for, and how many functions it carries.</td></tr>
+      <tr><td><a href="reference.html">Function reference</a></td>
+          <td>How to call the engine, the return-value contract, and the input
+              storage convention.</td></tr>
+      <tr><td><a href="architecture.html">Architecture</a></td>
+          <td>The core/module rule, hook slots, event extension points, and the
+              checks that enforce them.</td></tr>
+      <tr><td><a href="../docs/versions.html">Version matrix</a></td>
+          <td>Minecraft, loader and Java versions.</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    VortaForge &middot; Unlicense &middot;
+    <a href="../index.html">docs home</a> &middot;
+    <a href="modules.html">module list</a> &middot;
+    <a href="reference.html">function reference</a>
+  </footer>
+</div>
+</body>
+</html>
