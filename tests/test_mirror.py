@@ -258,6 +258,152 @@ class MirrorTest(unittest.TestCase):
                          "an unchanged sync rewrote index.json")
 
 
+    def test_a_behind_index_is_repaired_from_the_tree(self) -> None:
+        """Regression: a sync that reported "unchanged" while the tree was stale.
+
+        The real failure, seen on 2026-11-08 after six consecutive green syncs:
+        `core/` still held the pre-rename tree, `--apply` printed
+        `{"ok": true, "unchanged": true}` for it, and `--check` printed all four
+        mirrors as stale in the same state. The two modes disagreed because they
+        read different files - `--apply` trusted `index.json`'s own record of the
+        commit and `--check` trusted `.mirror.json`. An index that has drifted is
+        exactly the case where the record and the tree disagree, so a check
+        against the record is a check that cannot fail.
+
+        Reproduced by hand-writing a stale `commit` into index.json while the
+        tree on disk is current. The mirror must copy nothing (the tree is
+        already right) and must re-point the index at what the tree says.
+        """
+        work = self.tmp / "work"
+        work.mkdir()
+        origin = self.tmp / "origins" / "docs"
+        make_repo(origin, {"index.html": "theirs"})
+
+        index = self.tmp / "index.json"
+        # The index claims a commit that does not describe the tree.
+        index.write_text(json.dumps({
+            "org": "testorg", "repositories": [], "generatedAt": "2026-11-07T11:29:34Z",
+            "mirrors": {"docs": {"branch": "main", "commit": "stale0ld0commit",
+                                 "files": 1, "bytes": 6}},
+            "mirrorsGeneratedAt": "2026-11-07T11:29:34Z",
+        }), encoding="utf-8")
+
+        script = (
+            "import sys, pathlib\n"
+            "sys.path.insert(0, %r)\n"
+            "import mirror\n"
+            "mirror.repository_name = lambda: 'vorta-core'\n"
+            "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
+            "mirror.remote_head = lambda org, name, branch: 'abc'\n"
+            "mirror.discover.discover = lambda org, include_archived: "
+            "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
+            "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
+            "'--root',%r,'--apply']))\n"
+        ) % (str(ROOT / "scripts"), str(origin), str(index), str(work))
+
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        written = json.loads(index.read_text(encoding="utf-8"))
+        self.assertEqual(written["mirrors"]["docs"]["commit"],
+                         json.loads((work / "docs" / ".mirror.json")
+                                    .read_text(encoding="utf-8"))["commit"],
+                         "index.json was left describing a tree it does not match")
+
+    def test_apply_and_check_agree_about_a_stale_mirror(self) -> None:
+        """The two modes must answer the same question the same way.
+
+        Same stale-index setup, then both modes. `--check` is the one that was
+        right; the assertion is that `--apply` no longer contradicts it. A check
+        that only ever sees the fixed path would still pass if `--apply` went back
+        to reading index.json, because the index would have been repaired first.
+        """
+        work = self.tmp / "work"
+        work.mkdir()
+        origin = self.tmp / "origins" / "docs"
+        make_repo(origin, {"index.html": "theirs"})
+
+        index = self.tmp / "index.json"
+        index.write_text(json.dumps({
+            "org": "testorg", "repositories": [],
+            "mirrors": {"docs": {"branch": "main", "commit": "stale0ld0commit",
+                                 "files": 1, "bytes": 6}},
+            "mirrorsGeneratedAt": "2026-11-07T11:29:34Z",
+        }), encoding="utf-8")
+
+        def run(mode: str) -> subprocess.CompletedProcess:
+            script = (
+                "import sys, pathlib\n"
+                "sys.path.insert(0, %r)\n"
+                "import mirror\n"
+                "mirror.repository_name = lambda: 'vorta-core'\n"
+                "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
+                "mirror.remote_head = lambda org, name, branch: 'abc'\n"
+                "mirror.discover.discover = lambda org, include_archived: "
+                "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
+                "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
+                "'--root',%r,%s]))\n"
+            ) % (str(ROOT / "scripts"), str(origin), str(index), str(work), repr(mode))
+            return subprocess.run(["python3", "-c", script], capture_output=True, text=True)
+
+        # Before any apply: the tree has no manifest, so --check must call it stale.
+        check = run("--check")
+        self.assertEqual(check.returncode, 1, "--check must report a missing mirror as stale")
+
+        apply_ = run("--apply")
+        self.assertEqual(apply_.returncode, 0, apply_.stdout + apply_.stderr)
+        self.assertNotIn('"unchanged": true', apply_.stdout,
+                         "--apply skipped a mirror whose tree had no manifest")
+
+        # And once repaired, both agree it is current.
+        self.assertEqual(run("--check").returncode, 0)
+
+
+    def test_index_records_when_the_copy_was_taken(self) -> None:
+        """`mirrorsAt` answers "is this current?" - its absence caused a false alarm.
+
+        The audit of 2026-11-08 saw a mirror whose source commit predated the last
+        successful sync and concluded the sync was not writing. It was writing; the
+        index simply had no way to say when the bytes were copied, so a correct
+        mirror and a broken one looked identical. The field is the answer to that
+        question, and it must not move on a run that changed nothing.
+        """
+        work = self.tmp / "work"
+        work.mkdir()
+        origin = self.tmp / "origins" / "docs"
+        make_repo(origin, {"index.html": "theirs"})
+
+        index = self.tmp / "index.json"
+        index.write_text(json.dumps({"org": "testorg", "repositories": [], "mirrors": {}}),
+                         encoding="utf-8")
+        script = (
+            "import sys, pathlib\n"
+            "sys.path.insert(0, %r)\n"
+            "import mirror\n"
+            "mirror.repository_name = lambda: 'vorta-core'\n"
+            "mirror.clone = lambda org, name, branch: (pathlib.Path(%r), 'abc')\n"
+            "mirror.remote_head = lambda org, name, branch: 'abc'\n"
+            "mirror.discover.discover = lambda org, include_archived: "
+            "[{'name': 'docs', 'defaultBranch': 'main'}]\n"
+            "raise SystemExit(mirror.main(['--org','testorg','--index',%r,"
+            "'--root',%r,'--apply']))\n"
+        ) % (str(ROOT / "scripts"), str(origin), str(index), str(work))
+
+        def apply():
+            return subprocess.run(["python3", "-c", script], capture_output=True, text=True)
+
+        self.assertEqual(apply().returncode, 0)
+        first = json.loads(index.read_text(encoding="utf-8"))["mirrors"]["docs"]
+        self.assertIn("mirroredAt", first,
+                      "without a timestamp a current mirror is indistinguishable from a stale one")
+
+        # A second run that changes nothing must not move the stamp.
+        self.assertEqual(apply().returncode, 0)
+        second = json.loads(index.read_text(encoding="utf-8"))["mirrors"]["docs"]
+        self.assertEqual(first["mirroredAt"], second["mirroredAt"],
+                         "the timestamp moved although the mirror did not")
+
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

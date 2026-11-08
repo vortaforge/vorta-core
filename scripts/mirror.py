@@ -211,6 +211,34 @@ def clear(dest: Path) -> None:
     manifest.unlink(missing_ok=True)
 
 
+def _index_entry(record: dict, commit: str, previous: dict | None = None) -> dict:
+    """The index.json projection of one mirror.
+
+    `commit` is the *source* commit that was copied, and `mirroredAt` says when
+    the copy was taken. Both are needed to answer the question someone actually
+    asks of this file: "is the mirror current?". Without the timestamp there is no
+    way to tell a mirror that is behind from one that was checked a minute ago
+    and found current - the two look identical, and the audit on 2026-11-08 read
+    a correct-but-old mirror as a broken one.
+
+    `mirroredAt` is not written into the mirrored tree itself: a wall clock in
+    the tree made two syncs of the same commit produce different files, which
+    turned every mirror into a merge conflict. It belongs in the projection.
+    """
+    entry = {k: record[k] for k in ("branch", "commit", "files", "bytes") if k in record}
+    entry["commit"] = commit
+    # Keep the old stamp when this mirror did not move: the timestamp says "when
+    # these bytes were copied", not "when we last agreed with ourselves". Rewriting
+    # it every run is the clock-only commit this file already went out of its way
+    # to avoid - and it would make "checked and current" indistinguishable from
+    # "changed".
+    if previous and previous.get("commit") == commit and previous.get("mirroredAt"):
+        entry["mirroredAt"] = previous["mirroredAt"]
+    else:
+        entry["mirroredAt"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return entry
+
+
 def repository_name() -> str:
     """The name of the repository this script is running inside, if it can tell."""
     result = run(["git", "remote", "get-url", "origin"], check=False)
@@ -299,10 +327,36 @@ def main(argv: list[str]) -> int:
                 results.append({"repo": name, "ok": True})
             continue
 
-        if had := mirrors.get(name, {}).get("commit"):
-            if had == head and (dest / MANIFEST).is_file():
-                results.append({"repo": name, "ok": True, "unchanged": True})
-                continue
+        # What is on disk decides, not what index.json remembers.
+        #
+        # This used to compare `head` against `mirrors[name]["commit"]` - the
+        # index's own record - and skip the copy when they agreed. That is
+        # self-confirming: once the index was behind, `had != head` kept it
+        # visible only until the next write, and after any write that failed to
+        # land, the index's stale value and the tree it described agreed with
+        # each other forever. The symptom was a sync that reported
+        # "unchanged: true" for every repository while `--check`, reading
+        # .mirror.json, reported all of them stale - two modes disagreeing about
+        # one question because they read different files.
+        #
+        # Durable marker -> index is the only direction that cannot lie: the
+        # manifest is written in the same operation as the tree it describes.
+        manifest = dest / MANIFEST
+        have: dict = {}
+        if manifest.is_file():
+            try:
+                have = json.loads(manifest.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                have = {}
+        if have.get("commit") == head and manifest.is_file():
+            # Report through the same shape as a fresh copy, and repair the index
+            # entry from the manifest while we are here. The tree is authoritative;
+            # if index.json had drifted from it, this is what puts it back - the
+            # index is a projection of the mirrors, not a second opinion about
+            # them.
+            mirrors[name] = _index_entry(have, have.get("commit", head), mirrors.get(name))
+            results.append({"repo": name, "ok": True, "unchanged": True})
+            continue
         source, commit = clone(args.org, name, branch)
         try:
             clash = clashes_with_ours(source, dest, managed=name in mirrors)
@@ -330,7 +384,7 @@ def main(argv: list[str]) -> int:
             "note": "Snapshot of the default branch. Read-only: do not edit here.",
         })
         (dest / MANIFEST).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        mirrors[name] = {k: record[k] for k in ("branch", "commit", "files", "bytes")}
+        mirrors[name] = _index_entry(record, commit, mirrors.get(name))
         results.append(record)
 
     # A repository that left the organization keeps none of its mirror: a stale
@@ -367,9 +421,18 @@ def main(argv: list[str]) -> int:
         # fresh timestamp unconditionally meant every scheduled run produced a
         # commit whose only change was the clock. sync.py applies the same rule to
         # `generatedAt`, for the same reason.
+        # `mirroredAt` always moves, so comparing whole entries would make every
+        # run rewrite index.json - the clock-only commit this code already went to
+        # trouble to avoid. Compare the fields that describe the mirror.
+        def _shipped(entries: dict) -> str:
+            return json.dumps(
+                {n: {k: v[k] for k in ("branch", "commit", "files", "bytes", "mirroredAt")
+                     if k in v}
+                 for n, v in entries.items()},
+                sort_keys=True)
+
         before = index.get("mirrors") or {}
-        unchanged = json.dumps(before, sort_keys=True) == json.dumps(
-            out["mirrors"], sort_keys=True)
+        unchanged = _shipped(before) == _shipped(out["mirrors"])
         if unchanged and index.get("mirrorsGeneratedAt"):
             stamp = index["mirrorsGeneratedAt"]
         # The result is only written when it differs from what is on disk, so a
