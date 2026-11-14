@@ -8,3 +8,5 @@
 {"actor": "tickwarden", "at": "2026-11-06T17:51:22.782318Z", "detail": "created via API round-trip test", "repo": "sync-demo-repo", "type": "created"}
 {"actor": "vorta-core sync", "at": "2026-11-06T17:52:15.841276Z", "detail": "present in index.json, absent from the organization", "repo": "vorta-core-synctest", "type": "deleted"}
 {"actor": "vorta-core sync", "at": "2026-11-06T18:20:06.012627Z", "detail": "present in index.json, absent from the organization", "repo": "sync-demo-repo", "type": "deleted"}
+{"actor": "vorta-core sync", "at": "2026-11-12T10:00:29Z", "detail": "", "repo": "vortex", "type": "created"}
+{"actor": "vorta-core sync", "at": "2026-11-14T09:28:31.866880Z", "detail": "language: HTML -> PHP", "repo": "docs", "type": "changed"}
